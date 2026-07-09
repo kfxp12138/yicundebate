@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>辩论赛控场台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">一寸欢喜深圳辩论队</p>
+          <h1>辩论赛控场台</h1>
+        </div>
+        <div class="match-badge" id="matchStatus">单场赛制 · 正方先立论 · 反方后结辩</div>
+      </header>
+
+      <main class="workspace">
+        <section class="timer-surface" aria-labelledby="currentTitle">
+          <div class="stage-visual" aria-hidden="true">
+            <canvas id="stageCanvas"></canvas>
+          </div>
+
+          <div class="current-meta">
+            <span class="team-pill" id="currentTeam">正方</span>
+            <span class="phase-pill" id="currentPhase">立论</span>
+          </div>
+
+          <h2 id="currentTitle">正方一辩立论</h2>
+          <p class="speaker-line" id="currentSpeaker">一辩 · 3 分钟</p>
+
+          <div class="timer-readout" id="timerReadout" aria-live="polite">03:00</div>
+
+          <div class="clash-board" id="clashBoard" hidden>
+            <div class="clash-card affirm" id="affirmClashCard">
+              <span>正方剩余</span>
+              <strong id="affirmClashTime">02:00</strong>
+            </div>
+            <div class="clash-card negative" id="negativeClashCard">
+              <span>反方剩余</span>
+              <strong id="negativeClashTime">02:00</strong>
+            </div>
+          </div>
+
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+
+          <div class="timer-controls">
+            <button class="primary" id="startBtn" type="button">开始</button>
+            <button id="pauseBtn" type="button">暂停</button>
+            <button id="resetBtn" type="button">重置</button>
+            <button id="finishBtn" type="button">结束发言</button>
+            <button id="switchClashBtn" type="button">切换发言方</button>
+            <button id="nextBtn" type="button">下一环节</button>
+          </div>
+
+          <div class="surprise-row" aria-label="奇袭卡">
+            <button class="surprise-button affirm" id="affirmSurpriseBtn" type="button">
+              正方奇袭卡
+              <span>1:00</span>
+            </button>
+            <button class="surprise-button negative" id="negativeSurpriseBtn" type="button">
+              反方奇袭卡
+              <span>1:00</span>
+            </button>
+          </div>
+        </section>
+
+        <aside class="side-rail">
+          <section class="timeline-surface" aria-labelledby="timelineTitle">
+            <div class="section-head">
+              <h2 id="timelineTitle">赛程</h2>
+              <button class="ghost" id="restartMatchBtn" type="button">全场重置</button>
+            </div>
+            <ol class="timeline" id="timeline"></ol>
+          </section>
+
+          <section class="vote-surface" aria-labelledby="voteTitle">
+            <div class="section-head">
+              <h2 id="voteTitle">观众投票</h2>
+              <span class="live-status" id="liveStatus">手动计票</span>
+            </div>
+
+            <div class="vote-grid">
+              <div class="vote-match">
+                <h3>单场投票</h3>
+                <label>
+                  <span>正方票数</span>
+                  <input id="affirmVotes1" type="number" min="0" step="1" inputmode="numeric" value="0" />
+                </label>
+                <label>
+                  <span>反方票数</span>
+                  <input id="negativeVotes1" type="number" min="0" step="1" inputmode="numeric" value="0" />
+                </label>
+                <div class="margin-line">
+                  <span>正负值</span>
+                  <strong id="margin1">0</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="result-box">
+              <span>正负值</span>
+              <strong id="totalMargin">0</strong>
+              <b id="winnerText">平局</b>
+            </div>
+
+            <div class="live-vote-box">
+              <div>
+                <h3>微信投票入口</h3>
+                <p>把投票页链接做成二维码，观众用微信打开即可投票。</p>
+              </div>
+              <a id="voteLink" href="vote.html" target="_blank" rel="noreferrer">vote.html</a>
+              <div class="live-actions">
+                <button class="ghost" id="refreshVotesBtn" type="button">刷新票数</button>
+                <button class="ghost danger" id="resetLiveVotesBtn" type="button">清空服务器票数</button>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

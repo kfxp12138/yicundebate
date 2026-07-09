@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>一寸欢喜深圳辩论队 · 观众投票</title>
+    <style>
+      :root {
+        --paper: #f8faf7;
+        --ink: #1e2528;
+        --muted: #627071;
+        --line: #d7dfdc;
+        --affirm: #0f766e;
+        --affirm-soft: #dff3ef;
+        --negative: #b4232c;
+        --negative-soft: #f9e1e3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "Microsoft YaHei", sans-serif;
+        background:
+          linear-gradient(140deg, rgba(15, 118, 110, 0.1), transparent 36%),
+          linear-gradient(30deg, rgba(180, 35, 44, 0.1), transparent 48%),
+          var(--paper);
+      }
+
+      .page {
+        width: min(520px, 100%);
+        margin: 0 auto;
+        padding: 22px;
+      }
+
+      .brand {
+        margin: 20px 0 28px;
+      }
+
+      .brand span {
+        color: #c57f10;
+        font-size: 0.8rem;
+        font-weight: 900;
+      }
+
+      h1 {
+        margin: 8px 0 0;
+        font-size: 2.1rem;
+        line-height: 1.1;
+      }
+
+      .vote-card {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 18px 40px rgba(29, 40, 43, 0.12);
+      }
+
+      .team-button {
+        min-height: 112px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--ink);
+        font: inherit;
+        font-size: 1.7rem;
+        font-weight: 950;
+        cursor: pointer;
+      }
+
+      .team-button.affirm {
+        border-color: rgba(15, 118, 110, 0.35);
+        background: var(--affirm-soft);
+      }
+
+      .team-button.negative {
+        border-color: rgba(180, 35, 44, 0.35);
+        background: var(--negative-soft);
+      }
+
+      .team-button.selected {
+        color: #ffffff;
+      }
+
+      .team-button.affirm.selected {
+        background: var(--affirm);
+      }
+
+      .team-button.negative.selected {
+        background: var(--negative);
+      }
+
+      .status {
+        min-height: 44px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--muted);
+        font-weight: 850;
+        background: #ffffff;
+      }
+
+      .counts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .count {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .count span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.92rem;
+        font-weight: 800;
+      }
+
+      .count strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 2rem;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="brand">
+        <span>一寸欢喜深圳辩论队</span>
+        <h1>观众投票</h1>
+      </div>
+
+      <section class="vote-card">
+        <button class="team-button affirm" id="affirmBtn" type="button">投给正方</button>
+        <button class="team-button negative" id="negativeBtn" type="button">投给反方</button>
+        <div class="status" id="status">请选择支持方</div>
+
+        <div class="counts">
+          <div class="count">
+            <span>正方票数</span>
+            <strong id="affirmCount">0</strong>
+          </div>
+          <div class="count">
+            <span>反方票数</span>
+            <strong id="negativeCount">0</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const voterKey = "yicunhuanxi-voter-id";
+      let voterId = localStorage.getItem(voterKey);
+      if (!voterId) {
+        voterId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        localStorage.setItem(voterKey, voterId);
+      }
+
+      const els = {
+        affirmBtn: document.querySelector("#affirmBtn"),
+        negativeBtn: document.querySelector("#negativeBtn"),
+        status: document.querySelector("#status"),
+        affirmCount: document.querySelector("#affirmCount"),
+        negativeCount: document.querySelector("#negativeCount"),
+      };
+
+      function applyVotes(votes) {
+        els.affirmCount.textContent = votes.affirm ?? 0;
+        els.negativeCount.textContent = votes.negative ?? 0;
+        els.affirmBtn.classList.toggle("selected", votes.choice === "affirm");
+        els.negativeBtn.classList.toggle("selected", votes.choice === "negative");
+      }
+
+      async function vote(team) {
+        els.status.textContent = "提交中";
+        try {
+          const response = await fetch("/api/vote", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ team, voterId }),
+          });
+          if (!response.ok) throw new Error("vote failed");
+          const result = await response.json();
+          applyVotes(result);
+          els.status.textContent = "投票成功，可重新选择更改投票";
+        } catch {
+          els.status.textContent = "投票失败，请确认投票服务已启动";
+        }
+      }
+
+      async function refreshVotes() {
+        try {
+          const response = await fetch(`/api/votes?voterId=${encodeURIComponent(voterId)}`, {
+            cache: "no-store",
+          });
+          if (!response.ok) throw new Error("refresh failed");
+          applyVotes(await response.json());
+        } catch {
+          els.status.textContent = "等待投票服务";
+        }
+      }
+
+      if (window.EventSource) {
+        const source = new EventSource(`/api/votes/stream?voterId=${encodeURIComponent(voterId)}`);
+        source.onmessage = (event) => applyVotes(JSON.parse(event.data));
+      }
+
+      els.affirmBtn.addEventListener("click", () => vote("affirm"));
+      els.negativeBtn.addEventListener("click", () => vote("negative"));
+      refreshVotes();
+    </script>
+  </body>
+</html>
