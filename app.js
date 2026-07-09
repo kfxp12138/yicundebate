@@ -75,8 +75,7 @@ const els = {
   initialTotalVotes: document.querySelector("#initialTotalVotes"),
   currentTotalVotes: document.querySelector("#currentTotalVotes"),
   newVotesTotal: document.querySelector("#newVotesTotal"),
-  affirmToNegativeTotal: document.querySelector("#affirmToNegativeTotal"),
-  negativeToAffirmTotal: document.querySelector("#negativeToAffirmTotal"),
+  netSwingTotal: document.querySelector("#netSwingTotal"),
   voteLedgerBody: document.querySelector("#voteLedgerBody"),
   finalizeVotesBtn: document.querySelector("#finalizeVotesBtn"),
   finalVoteResult: document.querySelector("#finalVoteResult"),
@@ -507,23 +506,21 @@ function calculateVoteDelta(current, previous) {
   if (!previous) {
     return {
       newVotes: 0,
-      affirmToNegative: 0,
-      negativeToAffirm: 0,
+      netSwing: 0,
     };
   }
 
   const currentVoters = votersToMap(current);
   const previousVoters = votersToMap(previous);
   let newVotes = 0;
-  let affirmToNegative = 0;
-  let negativeToAffirm = 0;
+  let netSwing = 0;
 
   if (currentVoters.size && previousVoters.size) {
     for (const [id, choice] of currentVoters.entries()) {
       const previousChoice = previousVoters.get(id);
       if (!previousChoice) newVotes += 1;
-      if (previousChoice === "affirm" && choice === "negative") affirmToNegative += 1;
-      if (previousChoice === "negative" && choice === "affirm") negativeToAffirm += 1;
+      if (previousChoice === "affirm" && choice === "negative") netSwing -= 1;
+      if (previousChoice === "negative" && choice === "affirm") netSwing += 1;
     }
   } else {
     newVotes = Math.max(0, getTotalVotes(current) - getTotalVotes(previous));
@@ -531,8 +528,7 @@ function calculateVoteDelta(current, previous) {
 
   return {
     newVotes,
-    affirmToNegative,
-    negativeToAffirm,
+    netSwing,
   };
 }
 
@@ -612,8 +608,7 @@ function getLedgerTotals() {
   const initial = state.voteSnapshots[0] || null;
   const latest = state.voteSnapshots[state.voteSnapshots.length - 1] || null;
   let newVotes = 0;
-  let affirmToNegative = 0;
-  let negativeToAffirm = 0;
+  let netSwing = 0;
 
   if (initial && latest) {
     const initialVoters = votersToMap(initial);
@@ -622,8 +617,8 @@ function getLedgerTotals() {
       for (const [id, choice] of latestVoters.entries()) {
         const initialChoice = initialVoters.get(id);
         if (!initialChoice) newVotes += 1;
-        if (initialChoice === "affirm" && choice === "negative") affirmToNegative += 1;
-        if (initialChoice === "negative" && choice === "affirm") negativeToAffirm += 1;
+        if (initialChoice === "affirm" && choice === "negative") netSwing -= 1;
+        if (initialChoice === "negative" && choice === "affirm") netSwing += 1;
       }
     } else {
       newVotes = Math.max(0, getTotalVotes(latest) - getTotalVotes(initial));
@@ -634,20 +629,18 @@ function getLedgerTotals() {
     initial,
     latest,
     newVotes,
-    affirmToNegative,
-    negativeToAffirm,
+    netSwing,
   };
 }
 
 function renderVoteLedger() {
   const currentTotal = readVote(els.affirmVotes1) + readVote(els.negativeVotes1);
-  const { initial, latest, newVotes, affirmToNegative, negativeToAffirm } = getLedgerTotals();
+  const { initial, latest, newVotes, netSwing } = getLedgerTotals();
 
   els.initialTotalVotes.textContent = initial ? getTotalVotes(initial) : "0";
   els.currentTotalVotes.textContent = String(currentTotal);
   els.newVotesTotal.textContent = String(newVotes);
-  els.affirmToNegativeTotal.textContent = String(affirmToNegative);
-  els.negativeToAffirmTotal.textContent = String(negativeToAffirm);
+  els.netSwingTotal.textContent = signed(netSwing);
   els.recordStageBtn.disabled = !state.voteSnapshots.length;
   els.finalizeVotesBtn.hidden = Boolean(getCurrentRound()) || !state.voteSnapshots.length;
 
@@ -655,7 +648,7 @@ function renderVoteLedger() {
   if (!state.voteSnapshots.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 7;
+    cell.colSpan = 6;
     cell.textContent = "尚未记录初始投票";
     row.appendChild(cell);
     els.voteLedgerBody.appendChild(row);
@@ -669,8 +662,7 @@ function renderVoteLedger() {
         snapshot.negative,
         getTotalVotes(snapshot),
         withDelta.delta.newVotes,
-        withDelta.delta.affirmToNegative,
-        withDelta.delta.negativeToAffirm,
+        signed(withDelta.delta.netSwing),
       ].forEach((value) => {
         const cell = document.createElement("td");
         cell.textContent = value;
@@ -680,10 +672,10 @@ function renderVoteLedger() {
     });
   }
 
-  renderFinalVoteResult(initial, latest, newVotes, affirmToNegative, negativeToAffirm);
+  renderFinalVoteResult(initial, latest, newVotes, netSwing);
 }
 
-function renderFinalVoteResult(initial, latest, newVotes, affirmToNegative, negativeToAffirm) {
+function renderFinalVoteResult(initial, latest, newVotes, netSwing) {
   els.finalVoteResult.hidden = !state.finalResultVisible || !initial || !latest;
   els.finalVoteResult.classList.remove("negative", "tie");
   if (els.finalVoteResult.hidden) return;
@@ -700,8 +692,7 @@ function renderFinalVoteResult(initial, latest, newVotes, affirmToNegative, nega
     `结束正负值：${signed(finalMargin)}`,
     `全场正负值变化：${signed(swing)}`,
     `新加入票数：${newVotes}`,
-    `正方跑向反方：${affirmToNegative}`,
-    `反方跑向正方：${negativeToAffirm}`,
+    `净跑票（+正/-反）：${signed(netSwing)}`,
   ].join("<br>");
 }
 
