@@ -53,6 +53,7 @@
             <button id="resetBtn" type="button">重置</button>
             <button id="finishBtn" type="button">结束发言</button>
             <button id="switchClashBtn" type="button">切换发言方</button>
+            <button id="prevBtn" type="button">上一环节</button>
             <button id="nextBtn" type="button">下一环节</button>
           </div>
 
@@ -105,6 +106,63 @@
               <span>正负值</span>
               <strong id="totalMargin">0</strong>
               <b id="winnerText">平局</b>
+            </div>
+
+            <div class="vote-ledger">
+              <div class="vote-ledger-actions">
+                <button class="primary" id="recordInitialBtn" type="button">记录初始投票</button>
+                <button id="recordStageBtn" type="button">记录本环节</button>
+              </div>
+
+              <div class="vote-stat-grid">
+                <div>
+                  <span>初始总票</span>
+                  <strong id="initialTotalVotes">0</strong>
+                </div>
+                <div>
+                  <span>当前总票</span>
+                  <strong id="currentTotalVotes">0</strong>
+                </div>
+                <div>
+                  <span>新增票</span>
+                  <strong id="newVotesTotal">0</strong>
+                </div>
+                <div>
+                  <span>正方跑向反方</span>
+                  <strong id="affirmToNegativeTotal">0</strong>
+                </div>
+                <div>
+                  <span>反方跑向正方</span>
+                  <strong id="negativeToAffirmTotal">0</strong>
+                </div>
+              </div>
+
+              <div class="ledger-table-wrap">
+                <table class="ledger-table">
+                  <thead>
+                    <tr>
+                      <th>记录点</th>
+                      <th>正方</th>
+                      <th>反方</th>
+                      <th>总票</th>
+                      <th>新增</th>
+                      <th>正→反</th>
+                      <th>反→正</th>
+                    </tr>
+                  </thead>
+                  <tbody id="voteLedgerBody">
+                    <tr>
+                      <td colspan="7">尚未记录初始投票</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <button class="hidden-final-button" id="finalizeVotesBtn" type="button" hidden>
+                公布最终结果
+              </button>
+
+              <div class="final-result" id="finalVoteResult" hidden></div>
             </div>
 
             <div class="live-vote-box">

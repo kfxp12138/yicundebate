@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const root = __dirname;
 const port = Number(process.env.PORT || 5177);
@@ -66,6 +67,20 @@ function snapshot(voterId = "") {
   };
 }
 
+function hashVoterId(voterId) {
+  return crypto.createHash("sha256").update(voterId).digest("hex").slice(0, 16);
+}
+
+function detailSnapshot(voterId = "") {
+  return {
+    ...snapshot(voterId),
+    voters: Array.from(choices.entries()).map(([id, choice]) => ({
+      id: hashVoterId(id),
+      choice,
+    })),
+  };
+}
+
 function broadcast() {
   const data = `data: ${JSON.stringify(snapshot())}\n\n`;
   for (const res of clients) {
@@ -78,6 +93,11 @@ async function handleApi(req, res) {
 
   if (req.method === "GET" && url.pathname === "/api/votes") {
     sendJson(res, snapshot(url.searchParams.get("voterId") || ""));
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/votes/detail") {
+    sendJson(res, detailSnapshot(url.searchParams.get("voterId") || ""));
     return;
   }
 
