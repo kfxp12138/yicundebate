@@ -10,11 +10,8 @@ const BASE_ROUNDS = [
   makeSpeech("aff-2", "affirm", "二辩", "陈词", 240),
   makeSpeech("neg-2", "negative", "二辩", "陈词", 240),
   makeClash("clash-2", "二辩"),
-  makeSpeech("aff-3", "affirm", "三辩", "陈词", 240),
-  makeSpeech("neg-3", "negative", "三辩", "陈词", 240),
-  makeClash("clash-3", "三辩"),
-  makeSpeech("aff-4", "affirm", "四辩", "结辩", 240),
-  makeSpeech("neg-4", "negative", "四辩", "结辩", 240),
+  makeSpeech("aff-3", "affirm", "三辩", "结辩", 240),
+  makeSpeech("neg-3", "negative", "三辩", "结辩", 240),
 ];
 
 const state = {
@@ -122,10 +119,10 @@ function makeSurprise(team) {
     type: "surprise",
     team,
     teamLabel: TEAM_LABELS[team],
-    speaker: "四辩",
+    speaker: "三辩",
     phase: "奇袭",
     seconds: 60,
-    title: `${TEAM_LABELS[team]}四辩奇袭卡`,
+    title: `${TEAM_LABELS[team]}三辩奇袭卡`,
   };
 }
 
@@ -219,7 +216,7 @@ function render() {
     els.timerReadout.textContent = "00:00";
     els.timerReadout.className = "timer-readout done";
     els.progressFill.style.width = "0%";
-    els.matchStatus.textContent = "比赛结束 · 计算观众投票";
+    els.matchStatus.textContent = "三辩制 · 比赛结束 · 计算观众投票";
     els.startBtn.disabled = true;
     els.pauseBtn.disabled = true;
     els.resetBtn.disabled = true;
@@ -241,7 +238,7 @@ function render() {
 
   const complete = isCurrentRoundComplete();
   els.progressFill.style.width = `${getTotalProgress() * 100}%`;
-  els.matchStatus.textContent = `${state.currentIndex + 1} / ${state.rounds.length}`;
+  els.matchStatus.textContent = `三辩制 · ${state.currentIndex + 1} / ${state.rounds.length}`;
   els.startBtn.disabled = state.running || complete;
   els.pauseBtn.disabled = !state.running;
   els.resetBtn.disabled = false;
