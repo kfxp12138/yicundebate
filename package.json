@@ -1,0 +1,12 @@
+{
+  "name": "debate-control-voting",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Debate control desk and live audience voting pages.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
