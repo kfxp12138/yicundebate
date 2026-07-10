@@ -10,8 +10,8 @@ const BASE_ROUNDS = [
   makeSpeech("aff-2", "affirm", "二辩", "陈词", 240),
   makeSpeech("neg-2", "negative", "二辩", "陈词", 240),
   makeClash("clash-2", "二辩"),
-  makeSpeech("aff-3", "affirm", "三辩", "结辩", 240),
   makeSpeech("neg-3", "negative", "三辩", "结辩", 240),
+  makeSpeech("aff-3", "affirm", "三辩", "结辩", 240),
 ];
 
 const state = {
@@ -237,7 +237,7 @@ function render() {
 
   const complete = isCurrentRoundComplete();
   els.progressFill.style.width = `${getTotalProgress() * 100}%`;
-  els.matchStatus.textContent = `三辩制 · ${state.currentIndex + 1} / ${state.rounds.length}`;
+  els.matchStatus.textContent = `三辩制 · 反方先结辩 · ${state.currentIndex + 1} / ${state.rounds.length}`;
   els.startBtn.disabled = state.running || complete;
   els.pauseBtn.disabled = !state.running;
   els.resetBtn.disabled = false;
