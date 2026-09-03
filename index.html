@@ -3,18 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>辩论赛控场台</title>
+    <title>愚公应该移山 / 搬家 · 辩论赛控场台</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="app">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">一寸欢喜深圳辩论队</p>
-          <h1>辩论赛控场台</h1>
-          <p class="topic-line">辩题：如果能预知未来，知道结局会让人更勇敢还是更怯懦?</p>
+        <div class="event-identity">
+          <p class="eyebrow">一寸欢喜（深圳）辩论队</p>
+          <p class="desk-label">辩论赛控场台</p>
+          <h1>愚公应该移山 / 搬家</h1>
+          <div class="stance-row" aria-label="双方持方">
+            <span class="stance affirm">正方 · 应该移山</span>
+            <span class="stance negative">反方 · 应该搬家</span>
+          </div>
         </div>
-        <div class="match-badge" id="matchStatus">三辩制 · 单场赛制 · 反方先结辩 · 正方后结辩</div>
+        <div class="event-meta">
+          <p><span>时间</span><strong>2026.9.5 19:00-20:30</strong></p>
+          <p><span>地点</span><strong>天安云谷5栋37楼日落剧场</strong></p>
+          <div class="match-badge" id="matchStatus">三辩制 · 9 个环节 · 单场赛制</div>
+        </div>
       </header>
 
       <main class="workspace">
@@ -25,22 +33,22 @@
 
           <div class="current-meta">
             <span class="team-pill" id="currentTeam">正方</span>
-            <span class="phase-pill" id="currentPhase">立论</span>
+            <span class="phase-pill" id="currentPhase">陈词</span>
           </div>
 
-          <h2 id="currentTitle">正方一辩立论</h2>
+          <h2 id="currentTitle">正方一辩陈词</h2>
           <p class="speaker-line" id="currentSpeaker">一辩 · 3 分钟</p>
 
           <div class="timer-readout" id="timerReadout" aria-live="polite">03:00</div>
 
-          <div class="clash-board" id="clashBoard" hidden>
-            <div class="clash-card affirm" id="affirmClashCard">
+          <div class="debate-board" id="debateBoard" hidden>
+            <div class="debate-clock affirm" id="affirmDebateCard">
               <span>正方剩余</span>
-              <strong id="affirmClashTime">02:00</strong>
+              <strong id="affirmDebateTime">04:00</strong>
             </div>
-            <div class="clash-card negative" id="negativeClashCard">
+            <div class="debate-clock negative" id="negativeDebateCard">
               <span>反方剩余</span>
-              <strong id="negativeClashTime">02:00</strong>
+              <strong id="negativeDebateTime">04:00</strong>
             </div>
           </div>
 
@@ -53,20 +61,9 @@
             <button id="pauseBtn" type="button">暂停</button>
             <button id="resetBtn" type="button">重置</button>
             <button id="finishBtn" type="button">结束发言</button>
-            <button id="switchClashBtn" type="button">切换发言方</button>
-            <button id="prevBtn" type="button">上一环节</button>
-            <button id="nextBtn" type="button">下一环节</button>
-          </div>
-
-          <div class="surprise-row" aria-label="奇袭卡">
-            <button class="surprise-button affirm" id="affirmSurpriseBtn" type="button">
-              正方奇袭卡
-              <span>1:00</span>
-            </button>
-            <button class="surprise-button negative" id="negativeSurpriseBtn" type="button">
-              反方奇袭卡
-              <span>1:00</span>
-            </button>
+            <button id="switchSideBtn" type="button">切换发言方</button>
+            <button id="prevBtn" type="button">← 上一环节</button>
+            <button id="nextBtn" type="button">下一环节 →</button>
           </div>
         </section>
 
@@ -89,11 +86,11 @@
               <div class="vote-match">
                 <h3>单场投票</h3>
                 <label>
-                  <span>正方票数</span>
+                  <span>正方票数 · 移山</span>
                   <input id="affirmVotes1" type="number" min="0" step="1" inputmode="numeric" value="0" />
                 </label>
                 <label>
-                  <span>反方票数</span>
+                  <span>反方票数 · 搬家</span>
                   <input id="negativeVotes1" type="number" min="0" step="1" inputmode="numeric" value="0" />
                 </label>
                 <div class="margin-line">

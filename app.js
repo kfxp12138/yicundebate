@@ -4,25 +4,26 @@ const TEAM_LABELS = {
 };
 
 const BASE_ROUNDS = [
-  makeSpeech("aff-1", "affirm", "一辩", "立论", 180),
-  makeSpeech("neg-1", "negative", "一辩", "立论", 180),
-  makeClash("clash-1", "一辩"),
-  makeSpeech("aff-2", "affirm", "二辩", "陈词", 240),
-  makeSpeech("neg-2", "negative", "二辩", "陈词", 240),
-  makeClash("clash-2", "二辩"),
-  makeSpeech("neg-3", "negative", "三辩", "结辩", 240),
-  makeSpeech("aff-3", "affirm", "三辩", "结辩", 240),
+  makeSpeech("aff-1-speech", "affirm", "一辩", "陈词", 180),
+  makeSpeech("neg-2-question", "negative", "二辩", "质询", 90),
+  makeSpeech("neg-1-speech", "negative", "一辩", "陈词", 180),
+  makeSpeech("aff-2-question", "affirm", "二辩", "质询", 90),
+  makeSpeech("neg-2-speech", "negative", "二辩", "陈词", 90),
+  makeSpeech("aff-2-speech", "affirm", "二辩", "陈词", 90),
+  makeFreeDebate(),
+  makeSpeech("neg-3-close", "negative", "三辩", "结辩", 180),
+  makeSpeech("aff-3-close", "affirm", "三辩", "结辩", 180),
 ];
 
 const state = {
   rounds: BASE_ROUNDS.map(cloneRound),
   currentIndex: 0,
   remainingMs: 0,
-  clashRemainingMs: {
+  freeDebateRemainingMs: {
     affirm: 0,
     negative: 0,
   },
-  clashActiveTeam: "affirm",
+  freeDebateActiveTeam: "affirm",
   running: false,
   lastTick: 0,
   timerId: 0,
@@ -34,10 +35,6 @@ const state = {
   },
   voteSnapshots: [],
   finalResultVisible: false,
-  surpriseUsed: {
-    affirm: false,
-    negative: false,
-  },
 };
 
 const els = {
@@ -47,21 +44,19 @@ const els = {
   currentSpeaker: document.querySelector("#currentSpeaker"),
   timerReadout: document.querySelector("#timerReadout"),
   progressFill: document.querySelector("#progressFill"),
-  clashBoard: document.querySelector("#clashBoard"),
-  affirmClashCard: document.querySelector("#affirmClashCard"),
-  negativeClashCard: document.querySelector("#negativeClashCard"),
-  affirmClashTime: document.querySelector("#affirmClashTime"),
-  negativeClashTime: document.querySelector("#negativeClashTime"),
+  debateBoard: document.querySelector("#debateBoard"),
+  affirmDebateCard: document.querySelector("#affirmDebateCard"),
+  negativeDebateCard: document.querySelector("#negativeDebateCard"),
+  affirmDebateTime: document.querySelector("#affirmDebateTime"),
+  negativeDebateTime: document.querySelector("#negativeDebateTime"),
   startBtn: document.querySelector("#startBtn"),
   pauseBtn: document.querySelector("#pauseBtn"),
   resetBtn: document.querySelector("#resetBtn"),
   finishBtn: document.querySelector("#finishBtn"),
-  switchClashBtn: document.querySelector("#switchClashBtn"),
+  switchSideBtn: document.querySelector("#switchSideBtn"),
   prevBtn: document.querySelector("#prevBtn"),
   nextBtn: document.querySelector("#nextBtn"),
   restartMatchBtn: document.querySelector("#restartMatchBtn"),
-  affirmSurpriseBtn: document.querySelector("#affirmSurpriseBtn"),
-  negativeSurpriseBtn: document.querySelector("#negativeSurpriseBtn"),
   timeline: document.querySelector("#timeline"),
   matchStatus: document.querySelector("#matchStatus"),
   affirmVotes1: document.querySelector("#affirmVotes1"),
@@ -99,29 +94,16 @@ function makeSpeech(id, team, speaker, phase, seconds) {
   };
 }
 
-function makeClash(id, speaker) {
+function makeFreeDebate() {
   return {
-    id,
-    type: "clash",
+    id: "free-debate",
+    type: "free-debate",
     team: "affirm",
     teamLabel: "双方",
-    speaker,
-    phase: "开杠",
-    secondsPerSide: 120,
-    title: `${speaker}开杠`,
-  };
-}
-
-function makeSurprise(team) {
-  return {
-    id: `${team}-surprise-${Date.now()}`,
-    type: "surprise",
-    team,
-    teamLabel: TEAM_LABELS[team],
-    speaker: "三辩",
-    phase: "奇袭",
-    seconds: 60,
-    title: `${TEAM_LABELS[team]}三辩奇袭卡`,
+    speaker: "双方",
+    phase: "自由辩论",
+    secondsPerSide: 240,
+    title: "自由辩论",
   };
 }
 
@@ -133,8 +115,8 @@ function getCurrentRound() {
   return state.rounds[state.currentIndex] || null;
 }
 
-function isClash(round = getCurrentRound()) {
-  return round?.type === "clash";
+function isFreeDebate(round = getCurrentRound()) {
+  return round?.type === "free-debate";
 }
 
 function getOtherTeam(team) {
@@ -145,20 +127,20 @@ function loadCurrentRound() {
   const round = getCurrentRound();
   if (!round) {
     state.remainingMs = 0;
-    state.clashRemainingMs = { affirm: 0, negative: 0 };
+    state.freeDebateRemainingMs = { affirm: 0, negative: 0 };
     return;
   }
 
-  if (isClash(round)) {
+  if (isFreeDebate(round)) {
     const ms = round.secondsPerSide * 1000;
-    state.clashRemainingMs = { affirm: ms, negative: ms };
-    state.clashActiveTeam = "affirm";
+    state.freeDebateRemainingMs = { affirm: ms, negative: ms };
+    state.freeDebateActiveTeam = "affirm";
     state.remainingMs = ms;
     return;
   }
 
   state.remainingMs = round.seconds * 1000;
-  state.clashRemainingMs = { affirm: 0, negative: 0 };
+  state.freeDebateRemainingMs = { affirm: 0, negative: 0 };
 }
 
 function formatTime(ms) {
@@ -172,10 +154,18 @@ function formatShort(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+function formatDuration(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (!remainingSeconds) return `${minutes} 分钟`;
+  if (!minutes) return `${remainingSeconds} 秒`;
+  return `${minutes} 分 ${remainingSeconds} 秒`;
+}
+
 function getActiveRemainingMs() {
   const round = getCurrentRound();
   if (!round) return 0;
-  if (isClash(round)) return state.clashRemainingMs[state.clashActiveTeam];
+  if (isFreeDebate(round)) return state.freeDebateRemainingMs[state.freeDebateActiveTeam];
   return state.remainingMs;
 }
 
@@ -183,9 +173,9 @@ function getTotalProgress() {
   const round = getCurrentRound();
   if (!round) return 0;
 
-  if (isClash(round)) {
+  if (isFreeDebate(round)) {
     const initial = round.secondsPerSide * 2 * 1000;
-    const remaining = state.clashRemainingMs.affirm + state.clashRemainingMs.negative;
+    const remaining = state.freeDebateRemainingMs.affirm + state.freeDebateRemainingMs.negative;
     return Math.max(0, Math.min(1, remaining / initial));
   }
 
@@ -195,8 +185,8 @@ function getTotalProgress() {
 function isCurrentRoundComplete() {
   const round = getCurrentRound();
   if (!round) return true;
-  if (isClash(round)) {
-    return state.clashRemainingMs.affirm === 0 && state.clashRemainingMs.negative === 0;
+  if (isFreeDebate(round)) {
+    return state.freeDebateRemainingMs.affirm === 0 && state.freeDebateRemainingMs.negative === 0;
   }
   return state.remainingMs === 0;
 }
@@ -206,7 +196,7 @@ function render() {
 
   if (!round) {
     stopTimer();
-    els.clashBoard.hidden = true;
+    els.debateBoard.hidden = true;
     els.currentTeam.textContent = "完赛";
     els.currentTeam.className = "team-pill neutral";
     els.currentPhase.textContent = "投票";
@@ -215,67 +205,65 @@ function render() {
     els.timerReadout.textContent = "00:00";
     els.timerReadout.className = "timer-readout done";
     els.progressFill.style.width = "0%";
-    els.matchStatus.textContent = "三辩制 · 比赛结束 · 计算观众投票";
+    els.matchStatus.textContent = "比赛结束 · 等待公布观众投票";
     els.startBtn.disabled = true;
     els.pauseBtn.disabled = true;
     els.resetBtn.disabled = true;
     els.finishBtn.disabled = true;
-    els.switchClashBtn.disabled = true;
+    els.switchSideBtn.disabled = true;
     els.prevBtn.disabled = state.currentIndex === 0;
     els.nextBtn.disabled = true;
     renderTimeline();
-    updateSurpriseButtons();
     renderVoteLedger();
     return;
   }
 
-  if (isClash(round)) {
-    renderClash(round);
+  if (isFreeDebate(round)) {
+    renderFreeDebate(round);
   } else {
     renderSpeech(round);
   }
 
   const complete = isCurrentRoundComplete();
   els.progressFill.style.width = `${getTotalProgress() * 100}%`;
-  els.matchStatus.textContent = `三辩制 · 反方先结辩 · ${state.currentIndex + 1} / ${state.rounds.length}`;
+  els.matchStatus.textContent = `三辩制 · 第 ${state.currentIndex + 1} / ${state.rounds.length} 环节`;
   els.startBtn.disabled = state.running || complete;
   els.pauseBtn.disabled = !state.running;
   els.resetBtn.disabled = false;
   els.finishBtn.disabled = complete;
-  els.finishBtn.textContent = isClash(round) ? "结束开杠" : "结束发言";
-  els.switchClashBtn.disabled = !isClash(round) || complete;
+  els.finishBtn.textContent = isFreeDebate(round) ? "结束自由辩论" : "结束发言";
+  els.switchSideBtn.disabled = !isFreeDebate(round) || complete;
   els.prevBtn.disabled = state.running || state.currentIndex === 0;
   els.nextBtn.disabled = state.running || !complete;
   renderTimeline();
-  updateSurpriseButtons();
   renderVoteLedger();
   drawStage(round);
 }
 
 function renderSpeech(round) {
-  els.clashBoard.hidden = true;
+  els.debateBoard.hidden = true;
   els.currentTeam.textContent = round.teamLabel;
   els.currentTeam.className = `team-pill ${round.team}`;
   els.currentPhase.textContent = round.phase;
   els.currentTitle.textContent = round.title;
-  els.currentSpeaker.textContent = `${round.speaker} · ${Math.floor(round.seconds / 60)} 分钟`;
+  els.currentSpeaker.textContent = `${round.speaker} · ${formatDuration(round.seconds)}`;
   renderReadout(state.remainingMs);
 }
 
-function renderClash(round) {
-  const activeTeam = state.clashActiveTeam;
+function renderFreeDebate(round) {
+  const activeTeam = state.freeDebateActiveTeam;
   const activeLabel = TEAM_LABELS[activeTeam];
-  els.clashBoard.hidden = false;
+  els.debateBoard.hidden = false;
   els.currentTeam.textContent = activeLabel;
   els.currentTeam.className = `team-pill ${activeTeam}`;
   els.currentPhase.textContent = round.phase;
   els.currentTitle.textContent = round.title;
-  els.currentSpeaker.textContent = `${round.speaker} · ${activeLabel}发言中 · 双方各 2 分钟`;
-  els.affirmClashTime.textContent = formatTime(state.clashRemainingMs.affirm);
-  els.negativeClashTime.textContent = formatTime(state.clashRemainingMs.negative);
-  els.affirmClashCard.classList.toggle("active", activeTeam === "affirm");
-  els.negativeClashCard.classList.toggle("active", activeTeam === "negative");
-  renderReadout(state.clashRemainingMs[activeTeam]);
+  els.currentSpeaker.textContent = `${activeLabel}发言中 · 双方各 4 分钟`;
+  els.affirmDebateTime.textContent = formatTime(state.freeDebateRemainingMs.affirm);
+  els.negativeDebateTime.textContent = formatTime(state.freeDebateRemainingMs.negative);
+  els.affirmDebateCard.classList.toggle("active", activeTeam === "affirm");
+  els.negativeDebateCard.classList.toggle("active", activeTeam === "negative");
+  renderReadout(state.freeDebateRemainingMs[activeTeam]);
 }
 
 function renderReadout(ms) {
@@ -306,34 +294,27 @@ function renderTimeline() {
     title.textContent = round.title;
     const sub = document.createElement("div");
     sub.className = "timeline-sub";
-    sub.textContent = isClash(round)
-      ? `${round.speaker} · 双方各 ${formatShort(round.secondsPerSide)}`
+    sub.textContent = isFreeDebate(round)
+      ? `双方各 ${formatShort(round.secondsPerSide)} · 交替计时`
       : `${round.speaker} · ${round.phase}`;
     textWrap.append(title, sub);
 
     const time = document.createElement("div");
     time.className = "timeline-time";
-    time.textContent = isClash(round) ? `${formatShort(round.secondsPerSide)}/方` : formatShort(round.seconds);
+    time.textContent = isFreeDebate(round)
+      ? `${formatShort(round.secondsPerSide)}/方`
+      : formatShort(round.seconds);
 
     item.append(number, textWrap, time);
     els.timeline.appendChild(item);
   });
 }
 
-function updateSurpriseButtons() {
-  const round = getCurrentRound();
-  const canUse = Boolean(round) && !state.running && isCurrentRoundComplete() && round.type !== "surprise";
-  els.affirmSurpriseBtn.disabled = !canUse || state.surpriseUsed.affirm;
-  els.negativeSurpriseBtn.disabled = !canUse || state.surpriseUsed.negative;
-  els.affirmSurpriseBtn.querySelector("span").textContent = state.surpriseUsed.affirm ? "已用" : "1:00";
-  els.negativeSurpriseBtn.querySelector("span").textContent = state.surpriseUsed.negative ? "已用" : "1:00";
-}
-
 function startTimer() {
   const round = getCurrentRound();
   if (state.running || isCurrentRoundComplete() || !round) return;
-  if (isClash(round) && state.clashRemainingMs[state.clashActiveTeam] === 0) {
-    state.clashActiveTeam = state.clashRemainingMs.affirm > 0 ? "affirm" : "negative";
+  if (isFreeDebate(round) && state.freeDebateRemainingMs[state.freeDebateActiveTeam] === 0) {
+    state.freeDebateActiveTeam = state.freeDebateRemainingMs.affirm > 0 ? "affirm" : "negative";
   }
   state.running = true;
   state.lastTick = performance.now();
@@ -369,16 +350,16 @@ function consumeElapsed(elapsed) {
     return;
   }
 
-  if (isClash(round)) {
-    const activeTeam = state.clashActiveTeam;
-    const nextValue = Math.max(0, state.clashRemainingMs[activeTeam] - elapsed);
-    state.clashRemainingMs[activeTeam] = nextValue;
+  if (isFreeDebate(round)) {
+    const activeTeam = state.freeDebateActiveTeam;
+    const nextValue = Math.max(0, state.freeDebateRemainingMs[activeTeam] - elapsed);
+    state.freeDebateRemainingMs[activeTeam] = nextValue;
 
     if (nextValue === 0) {
       const otherTeam = getOtherTeam(activeTeam);
       playFinishTone();
-      if (state.clashRemainingMs[otherTeam] > 0) {
-        state.clashActiveTeam = otherTeam;
+      if (state.freeDebateRemainingMs[otherTeam] > 0) {
+        state.freeDebateActiveTeam = otherTeam;
       } else {
         stopTimer();
       }
@@ -403,8 +384,8 @@ function finishCurrentRound() {
   const round = getCurrentRound();
   if (!round || isCurrentRoundComplete()) return;
   stopTimer();
-  if (isClash(round)) {
-    state.clashRemainingMs = { affirm: 0, negative: 0 };
+  if (isFreeDebate(round)) {
+    state.freeDebateRemainingMs = { affirm: 0, negative: 0 };
   } else {
     state.remainingMs = 0;
   }
@@ -412,9 +393,9 @@ function finishCurrentRound() {
   render();
 }
 
-function switchClashSide() {
+function switchDebateSide() {
   const round = getCurrentRound();
-  if (!isClash(round) || isCurrentRoundComplete()) return;
+  if (!isFreeDebate(round) || isCurrentRoundComplete()) return;
 
   if (state.running) {
     const now = performance.now();
@@ -422,9 +403,9 @@ function switchClashSide() {
     state.lastTick = now;
   }
 
-  const otherTeam = getOtherTeam(state.clashActiveTeam);
-  if (state.clashRemainingMs[otherTeam] > 0) {
-    state.clashActiveTeam = otherTeam;
+  const otherTeam = getOtherTeam(state.freeDebateActiveTeam);
+  if (state.freeDebateRemainingMs[otherTeam] > 0) {
+    state.freeDebateActiveTeam = otherTeam;
   }
   render();
 }
@@ -451,19 +432,8 @@ function restartMatch() {
   state.currentIndex = 0;
   state.voteSnapshots = [];
   state.finalResultVisible = false;
-  state.surpriseUsed = {
-    affirm: false,
-    negative: false,
-  };
   loadCurrentRound();
   render();
-}
-
-function activateSurprise(team) {
-  if (state.surpriseUsed[team] || state.running || !isCurrentRoundComplete()) return;
-  state.rounds.splice(state.currentIndex + 1, 0, makeSurprise(team));
-  state.surpriseUsed[team] = true;
-  goNext();
 }
 
 function readVote(input) {
@@ -795,72 +765,75 @@ function drawStage(round = getCurrentRound()) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, rect.width, rect.height);
 
-  const activeTeam = isClash(round) ? state.clashActiveTeam : round?.team;
-  const bg = ctx.createLinearGradient(0, 0, rect.width, rect.height);
-  bg.addColorStop(0, "#223844");
-  bg.addColorStop(0.55, "#314b5f");
-  bg.addColorStop(1, "#6f2530");
-  ctx.fillStyle = bg;
+  const activeTeam = isFreeDebate(round) ? state.freeDebateActiveTeam : round?.team;
+  ctx.fillStyle = "#172628";
   ctx.fillRect(0, 0, rect.width, rect.height);
 
-  ctx.globalAlpha = 0.22;
-  ctx.fillStyle = "#f7f2df";
-  for (let i = 0; i < 8; i += 1) {
-    const x = (rect.width / 7) * i;
-    ctx.beginPath();
-    ctx.ellipse(x, 34, 52, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  drawPodium(ctx, rect.width * 0.2, rect.height * 0.66, "#0f766e", activeTeam === "affirm");
-  drawPodium(ctx, rect.width * 0.8, rect.height * 0.66, "#b4232c", activeTeam === "negative");
-
-  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.fillStyle = "#d7a63f";
   ctx.beginPath();
-  ctx.ellipse(rect.width * 0.5, rect.height * 0.78, rect.width * 0.22, 14, 0, 0, Math.PI * 2);
+  ctx.arc(rect.width * 0.76, 44, 23, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#e0a331";
-  ctx.fillRect(rect.width * 0.48, rect.height * 0.28, rect.width * 0.04, rect.height * 0.42);
+
+  drawMountain(ctx, rect.width, rect.height, "#314a45", 0.64, 0.28);
+  drawMountain(ctx, rect.width, rect.height, "#233a38", 0.76, 0.12);
+
+  ctx.strokeStyle = "#d7a63f";
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.arc(rect.width * 0.5, rect.height * 0.25, 20, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(rect.width * 0.08, rect.height * 0.82);
+  ctx.bezierCurveTo(
+    rect.width * 0.28,
+    rect.height * 0.7,
+    rect.width * 0.42,
+    rect.height * 0.88,
+    rect.width * 0.58,
+    rect.height * 0.5,
+  );
+  ctx.stroke();
+
+  drawPositionMarker(ctx, rect.width * 0.15, rect.height * 0.64, "移山", "#17756d", activeTeam === "affirm");
+  drawPositionMarker(ctx, rect.width * 0.85, rect.height * 0.64, "搬家", "#b54a45", activeTeam === "negative");
 
   ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.font = "700 14px system-ui, sans-serif";
+  ctx.font = "800 13px system-ui, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("一寸欢喜深圳辩论队", rect.width * 0.5, rect.height - 18);
+  ctx.fillText("一寸欢喜（深圳）辩论队", rect.width * 0.5, rect.height - 16);
   ctx.restore();
 }
 
-function drawPodium(ctx, x, y, color, active) {
+function drawMountain(ctx, width, height, color, baseline, offset) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  ctx.lineTo(0, height * baseline);
+  ctx.lineTo(width * (0.16 + offset), height * 0.31);
+  ctx.lineTo(width * (0.31 + offset), height * 0.66);
+  ctx.lineTo(width * (0.46 + offset), height * 0.38);
+  ctx.lineTo(width, height * 0.72);
+  ctx.lineTo(width, height);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawPositionMarker(ctx, x, y, label, color, active) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.fillStyle = active ? "rgba(255,255,255,0.34)" : "rgba(255,255,255,0.16)";
+  ctx.fillStyle = active ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.12)";
   ctx.beginPath();
-  ctx.ellipse(0, 46, 76, 18, 0, 0, Math.PI * 2);
+  ctx.arc(0, 0, 42, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.roundRect(-44, -14, 88, 72, 8);
+  ctx.arc(0, 0, 32, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "rgba(255,255,255,0.88)";
-  ctx.beginPath();
-  ctx.roundRect(-28, 4, 56, 12, 6);
-  ctx.fill();
-
-  ctx.fillStyle = "#f3ddbd";
-  ctx.beginPath();
-  ctx.arc(0, -42, 20, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#19272e";
-  ctx.beginPath();
-  ctx.arc(-8, -50, 16, 0, Math.PI * 2);
-  ctx.arc(8, -50, 16, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 15px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, 0, 1);
   ctx.restore();
 }
 
@@ -884,12 +857,10 @@ els.startBtn.addEventListener("click", startTimer);
 els.pauseBtn.addEventListener("click", pauseTimer);
 els.resetBtn.addEventListener("click", resetCurrentRound);
 els.finishBtn.addEventListener("click", finishCurrentRound);
-els.switchClashBtn.addEventListener("click", switchClashSide);
+els.switchSideBtn.addEventListener("click", switchDebateSide);
 els.prevBtn.addEventListener("click", goPrevious);
 els.nextBtn.addEventListener("click", goNext);
 els.restartMatchBtn.addEventListener("click", restartMatch);
-els.affirmSurpriseBtn.addEventListener("click", () => activateSurprise("affirm"));
-els.negativeSurpriseBtn.addEventListener("click", () => activateSurprise("negative"));
 els.affirmVotes1.addEventListener("input", updateVotes);
 els.negativeVotes1.addEventListener("input", updateVotes);
 els.recordInitialBtn.addEventListener("click", recordInitialSnapshot);
