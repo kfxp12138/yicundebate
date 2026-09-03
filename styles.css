@@ -734,6 +734,87 @@ button.primary {
   color: var(--negative-dark);
 }
 
+.time-warning-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(23, 38, 40, 0.62);
+}
+
+.time-warning-modal[hidden] {
+  display: none;
+}
+
+.time-warning-panel {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 34px 28px 28px;
+  border-top: 6px solid var(--gold);
+  border-radius: 8px;
+  color: var(--ink);
+  text-align: center;
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  animation: warning-in 0.2s ease-out;
+}
+
+.time-warning-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  font-size: 1.45rem;
+  background: transparent;
+}
+
+.time-warning-kicker {
+  margin-bottom: 10px;
+  color: #7a5614;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.time-warning-panel strong {
+  display: block;
+  font-size: 1.35rem;
+  line-height: 1.35;
+}
+
+.time-warning-panel #timeWarningMessage {
+  margin: 12px 0 0;
+  color: var(--negative-dark);
+  font-size: 2.35rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+@keyframes warning-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .time-warning-panel {
+    animation: none;
+  }
+}
+
 @media (max-width: 1120px) {
   .workspace {
     grid-template-columns: 1fr;

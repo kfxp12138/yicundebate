@@ -94,16 +94,16 @@
                   <input id="negativeVotes1" type="number" min="0" step="1" inputmode="numeric" value="0" />
                 </label>
                 <div class="margin-line">
-                  <span>正负值</span>
+                  <span>当前总票差（仅参考）</span>
                   <strong id="margin1">0</strong>
                 </div>
               </div>
             </div>
 
             <div class="result-box">
-              <span>正负值</span>
+              <span>当前总票差</span>
               <strong id="totalMargin">0</strong>
-              <b id="winnerText">平局</b>
+              <b id="winnerText">票数相同</b>
             </div>
 
             <div class="vote-ledger">
@@ -122,7 +122,7 @@
                   <strong id="currentTotalVotes">0</strong>
                 </div>
                 <div>
-                  <span>新增票</span>
+                  <span>新增票（不计入）</span>
                   <strong id="newVotesTotal">0</strong>
                 </div>
                 <div>
@@ -152,7 +152,7 @@
               </div>
 
               <button class="hidden-final-button" id="finalizeVotesBtn" type="button" hidden>
-                公布最终结果
+                记录最终投票并公布结果
               </button>
 
               <div class="final-result" id="finalVoteResult" hidden></div>
@@ -172,6 +172,23 @@
           </section>
         </aside>
       </main>
+    </div>
+
+    <div class="time-warning-modal" id="timeWarningModal" hidden>
+      <div class="time-warning-panel" role="alert" aria-live="assertive">
+        <button
+          class="time-warning-close"
+          id="timeWarningCloseBtn"
+          type="button"
+          aria-label="关闭时间提醒"
+          title="关闭时间提醒"
+        >
+          ×
+        </button>
+        <p class="time-warning-kicker">时间提醒</p>
+        <strong id="timeWarningTitle">本环节</strong>
+        <p id="timeWarningMessage">还剩 30 秒</p>
+      </div>
     </div>
 
     <script src="app.js"></script>

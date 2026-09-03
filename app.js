@@ -35,6 +35,8 @@ const state = {
   },
   voteSnapshots: [],
   finalResultVisible: false,
+  warningKeys: new Set(),
+  warningTimeoutId: 0,
 };
 
 const els = {
@@ -79,6 +81,10 @@ const els = {
   refreshVotesBtn: document.querySelector("#refreshVotesBtn"),
   resetLiveVotesBtn: document.querySelector("#resetLiveVotesBtn"),
   stageCanvas: document.querySelector("#stageCanvas"),
+  timeWarningModal: document.querySelector("#timeWarningModal"),
+  timeWarningCloseBtn: document.querySelector("#timeWarningCloseBtn"),
+  timeWarningTitle: document.querySelector("#timeWarningTitle"),
+  timeWarningMessage: document.querySelector("#timeWarningMessage"),
 };
 
 function makeSpeech(id, team, speaker, phase, seconds) {
@@ -123,8 +129,21 @@ function getOtherTeam(team) {
   return team === "affirm" ? "negative" : "affirm";
 }
 
+function getWarningKey(round, team = "") {
+  return team ? `${round.id}:${team}` : round.id;
+}
+
+function clearWarningsForRound(round) {
+  if (!round) return;
+  state.warningKeys.delete(getWarningKey(round));
+  state.warningKeys.delete(getWarningKey(round, "affirm"));
+  state.warningKeys.delete(getWarningKey(round, "negative"));
+}
+
 function loadCurrentRound() {
   const round = getCurrentRound();
+  hideTimeWarning();
+  clearWarningsForRound(round);
   if (!round) {
     state.remainingMs = 0;
     state.freeDebateRemainingMs = { affirm: 0, negative: 0 };
@@ -276,6 +295,35 @@ function renderReadout(ms) {
   }
 }
 
+function maybeTriggerThirtySecondWarning(round, team, previousMs, nextMs) {
+  const thresholdMs = 30 * 1000;
+  if (previousMs <= thresholdMs || nextMs > thresholdMs || nextMs === 0) return;
+
+  const key = getWarningKey(round, team);
+  if (state.warningKeys.has(key)) return;
+  state.warningKeys.add(key);
+
+  const title = team ? `${TEAM_LABELS[team]}自由辩论` : round.title;
+  showTimeWarning(title);
+  playWarningTone();
+}
+
+function showTimeWarning(title) {
+  if (state.warningTimeoutId) window.clearTimeout(state.warningTimeoutId);
+  els.timeWarningTitle.textContent = title;
+  els.timeWarningMessage.textContent = "还剩 30 秒";
+  els.timeWarningModal.hidden = false;
+  state.warningTimeoutId = window.setTimeout(hideTimeWarning, 4500);
+}
+
+function hideTimeWarning() {
+  if (state.warningTimeoutId) {
+    window.clearTimeout(state.warningTimeoutId);
+    state.warningTimeoutId = 0;
+  }
+  els.timeWarningModal.hidden = true;
+}
+
 function renderTimeline() {
   els.timeline.innerHTML = "";
   state.rounds.forEach((round, index) => {
@@ -352,8 +400,10 @@ function consumeElapsed(elapsed) {
 
   if (isFreeDebate(round)) {
     const activeTeam = state.freeDebateActiveTeam;
-    const nextValue = Math.max(0, state.freeDebateRemainingMs[activeTeam] - elapsed);
+    const previousValue = state.freeDebateRemainingMs[activeTeam];
+    const nextValue = Math.max(0, previousValue - elapsed);
     state.freeDebateRemainingMs[activeTeam] = nextValue;
+    maybeTriggerThirtySecondWarning(round, activeTeam, previousValue, nextValue);
 
     if (nextValue === 0) {
       const otherTeam = getOtherTeam(activeTeam);
@@ -367,7 +417,9 @@ function consumeElapsed(elapsed) {
     return;
   }
 
-  state.remainingMs = Math.max(0, state.remainingMs - elapsed);
+  const previousValue = state.remainingMs;
+  state.remainingMs = Math.max(0, previousValue - elapsed);
+  maybeTriggerThirtySecondWarning(round, "", previousValue, state.remainingMs);
   if (state.remainingMs === 0) {
     stopTimer();
     playFinishTone();
@@ -428,10 +480,12 @@ function goPrevious() {
 
 function restartMatch() {
   stopTimer();
+  hideTimeWarning();
   state.rounds = BASE_ROUNDS.map(cloneRound);
   state.currentIndex = 0;
   state.voteSnapshots = [];
   state.finalResultVisible = false;
+  state.warningKeys.clear();
   loadCurrentRound();
   render();
 }
@@ -460,6 +514,10 @@ function normalizeVoteDetail(votes, label = "", type = "stage") {
     affirm: Number(votes?.affirm || 0),
     negative: Number(votes?.negative || 0),
     voters,
+    identityTracking:
+      typeof votes?.identityTracking === "boolean"
+        ? votes.identityTracking
+        : Array.isArray(votes?.voters),
     createdAt: new Date().toLocaleTimeString("zh-CN", {
       hour: "2-digit",
       minute: "2-digit",
@@ -485,7 +543,7 @@ function calculateVoteDelta(current, previous) {
   let newVotes = 0;
   let netSwing = 0;
 
-  if (currentVoters.size && previousVoters.size) {
+  if (current.identityTracking && previous.identityTracking) {
     for (const [id, choice] of currentVoters.entries()) {
       const previousChoice = previousVoters.get(id);
       if (!previousChoice) newVotes += 1;
@@ -524,6 +582,7 @@ function getCurrentManualVotes() {
     affirm: readVote(els.affirmVotes1),
     negative: readVote(els.negativeVotes1),
     voters: [],
+    identityTracking: false,
   };
 }
 
@@ -560,10 +619,10 @@ async function recordStageSnapshot() {
 
 async function finalizeVotes() {
   if (!state.voteSnapshots.length) return;
-  const last = state.voteSnapshots[state.voteSnapshots.length - 1];
-  if (last?.type !== "final") {
-    await recordStageSnapshot();
-  }
+  const votes = await getVoteDetailForRecord();
+  const finalSnapshot = normalizeVoteDetail(votes, "最终投票", "final");
+  state.voteSnapshots = state.voteSnapshots.filter((snapshot) => snapshot.type !== "final");
+  state.voteSnapshots.push(finalSnapshot);
   state.finalResultVisible = true;
   renderVoteLedger();
 }
@@ -579,11 +638,13 @@ function getLedgerTotals() {
   const latest = state.voteSnapshots[state.voteSnapshots.length - 1] || null;
   let newVotes = 0;
   let netSwing = 0;
+  let identityTracking = false;
 
   if (initial && latest) {
     const initialVoters = votersToMap(initial);
     const latestVoters = votersToMap(latest);
-    if (initialVoters.size && latestVoters.size) {
+    identityTracking = Boolean(initial.identityTracking && latest.identityTracking);
+    if (identityTracking) {
       for (const [id, choice] of latestVoters.entries()) {
         const initialChoice = initialVoters.get(id);
         if (!initialChoice) newVotes += 1;
@@ -600,19 +661,23 @@ function getLedgerTotals() {
     latest,
     newVotes,
     netSwing,
+    identityTracking,
   };
 }
 
 function renderVoteLedger() {
   const currentTotal = readVote(els.affirmVotes1) + readVote(els.negativeVotes1);
-  const { initial, latest, newVotes, netSwing } = getLedgerTotals();
+  const { initial, latest, newVotes, netSwing, identityTracking } = getLedgerTotals();
 
   els.initialTotalVotes.textContent = initial ? getTotalVotes(initial) : "0";
   els.currentTotalVotes.textContent = String(currentTotal);
   els.newVotesTotal.textContent = String(newVotes);
   els.netSwingTotal.textContent = signed(netSwing);
-  els.recordStageBtn.disabled = !state.voteSnapshots.length;
+  els.recordStageBtn.disabled = !state.voteSnapshots.length || !getCurrentRound();
   els.finalizeVotesBtn.hidden = Boolean(getCurrentRound()) || !state.voteSnapshots.length;
+  els.finalizeVotesBtn.textContent = state.finalResultVisible
+    ? "重新记录最终投票"
+    : "记录最终投票并公布结果";
 
   els.voteLedgerBody.innerHTML = "";
   if (!state.voteSnapshots.length) {
@@ -642,27 +707,33 @@ function renderVoteLedger() {
     });
   }
 
-  renderFinalVoteResult(initial, latest, newVotes, netSwing);
+  renderFinalVoteResult(initial, latest, newVotes, netSwing, identityTracking);
 }
 
-function renderFinalVoteResult(initial, latest, newVotes, netSwing) {
+function renderFinalVoteResult(initial, latest, newVotes, netSwing, identityTracking) {
   els.finalVoteResult.hidden = !state.finalResultVisible || !initial || !latest;
   els.finalVoteResult.classList.remove("negative", "tie");
   if (els.finalVoteResult.hidden) return;
 
-  const initialMargin = initial.affirm - initial.negative;
-  const finalMargin = latest.affirm - latest.negative;
-  const swing = finalMargin - initialMargin;
-  const winner = finalMargin > 0 ? "正方胜" : finalMargin < 0 ? "反方胜" : "平局";
-  if (finalMargin < 0) els.finalVoteResult.classList.add("negative");
-  if (finalMargin === 0) els.finalVoteResult.classList.add("tie");
+  if (!identityTracking) {
+    els.finalVoteResult.classList.add("tie");
+    els.finalVoteResult.innerHTML = [
+      "<strong>暂时无法计算最终结果</strong>",
+      "请连接实时投票服务器后重新记录初始投票和最终投票。",
+      "只有带观众身份记录的投票才能排除中途新增票。",
+    ].join("<br>");
+    return;
+  }
+
+  const winner = netSwing > 0 ? "正方胜" : netSwing < 0 ? "反方胜" : "平局";
+  if (netSwing < 0) els.finalVoteResult.classList.add("negative");
+  if (netSwing === 0) els.finalVoteResult.classList.add("tie");
   els.finalVoteResult.innerHTML = [
     `<strong>最终结果：${winner}</strong>`,
-    `初始正负值：${signed(initialMargin)}`,
-    `结束正负值：${signed(finalMargin)}`,
-    `全场正负值变化：${signed(swing)}`,
-    `新加入票数：${newVotes}`,
-    `净跑票（+正/-反）：${signed(netSwing)}`,
+    `初始投票：正方 ${initial.affirm} / 反方 ${initial.negative}`,
+    `最终投票：正方 ${latest.affirm} / 反方 ${latest.negative}`,
+    `有效净跑票（+正/-反）：${signed(netSwing)}`,
+    `中途新增票：${newVotes}（不计入结果）`,
   ].join("<br>");
 }
 
@@ -673,12 +744,12 @@ function updateVotes() {
 
   els.resultBox.classList.remove("negative", "tie");
   if (margin > 0) {
-    els.winnerText.textContent = "正方胜";
+    els.winnerText.textContent = "正方票数较多";
   } else if (margin < 0) {
-    els.winnerText.textContent = "反方胜";
+    els.winnerText.textContent = "反方票数较多";
     els.resultBox.classList.add("negative");
   } else {
-    els.winnerText.textContent = "平局";
+    els.winnerText.textContent = "票数相同";
     els.resultBox.classList.add("tie");
   }
   renderVoteLedger();
@@ -853,6 +924,31 @@ function playFinishTone() {
   oscillator.stop(context.currentTime + 0.42);
 }
 
+function playWarningTone() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+
+  try {
+    const context = new AudioContext();
+    [0, 0.28].forEach((delay, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const startAt = context.currentTime + delay;
+      oscillator.type = "sine";
+      oscillator.frequency.value = index === 0 ? 660 : 880;
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.2, startAt + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.18);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(startAt);
+      oscillator.stop(startAt + 0.2);
+    });
+    window.setTimeout(() => context.close().catch(() => {}), 800);
+  } catch {
+    // Some browsers block sound until the first direct user interaction.
+  }
+}
+
 els.startBtn.addEventListener("click", startTimer);
 els.pauseBtn.addEventListener("click", pauseTimer);
 els.resetBtn.addEventListener("click", resetCurrentRound);
@@ -868,6 +964,10 @@ els.recordStageBtn.addEventListener("click", recordStageSnapshot);
 els.finalizeVotesBtn.addEventListener("click", finalizeVotes);
 els.refreshVotesBtn.addEventListener("click", refreshVotesFromServer);
 els.resetLiveVotesBtn.addEventListener("click", resetServerVotes);
+els.timeWarningCloseBtn.addEventListener("click", hideTimeWarning);
+els.timeWarningModal.addEventListener("click", (event) => {
+  if (event.target === els.timeWarningModal) hideTimeWarning();
+});
 window.addEventListener("resize", () => drawStage());
 
 loadCurrentRound();
