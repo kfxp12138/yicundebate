@@ -10,6 +10,8 @@ const BASE_ROUNDS = [
   makeSpeech("aff-2-question", "affirm", "二辩", "质询", 90),
   makeSpeech("neg-2-speech", "negative", "二辩", "陈词", 90),
   makeSpeech("aff-2-speech", "affirm", "二辩", "陈词", 90),
+  makeChairQuestion("chair-aff", "affirm"),
+  makeChairQuestion("chair-neg", "negative"),
   makeFreeDebate(),
   makeSpeech("neg-3-close", "negative", "三辩", "结辩", 180),
   makeSpeech("aff-3-close", "affirm", "三辩", "结辩", 180),
@@ -97,6 +99,19 @@ function makeSpeech(id, team, speaker, phase, seconds) {
     phase,
     seconds,
     title: `${TEAM_LABELS[team]}${speaker}${phase}`,
+  };
+}
+
+function makeChairQuestion(id, team) {
+  return {
+    id,
+    type: "speech",
+    team,
+    teamLabel: TEAM_LABELS[team],
+    speaker: `${TEAM_LABELS[team]}回应`,
+    phase: "主席提问",
+    seconds: 60,
+    title: `主席向${TEAM_LABELS[team]}提问`,
   };
 }
 
