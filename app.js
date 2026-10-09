@@ -4,28 +4,43 @@ const TEAM_LABELS = {
 };
 
 const BASE_ROUNDS = [
-  makeSpeech("aff-1-speech", "affirm", "一辩", "陈词", 180),
-  makeSpeech("neg-2-question", "negative", "二辩", "质询", 90),
-  makeSpeech("neg-1-speech", "negative", "一辩", "陈词", 180),
-  makeSpeech("aff-2-question", "affirm", "二辩", "质询", 90),
-  makeSpeech("neg-2-speech", "negative", "二辩", "陈词", 90),
-  makeSpeech("aff-2-speech", "affirm", "二辩", "陈词", 90),
-  makeChairQuestion("chair-aff", "affirm"),
-  makeChairQuestion("chair-neg", "negative"),
-  makeFreeDebate(),
-  makeSpeech("neg-3-close", "negative", "三辩", "结辩", 180),
-  makeSpeech("aff-3-close", "affirm", "三辩", "结辩", 180),
+  makeSpeech("aff-1-speech", "affirm", "一辩", "立论", 240),
+  makeQuestion("neg-4-question", "negative", "四辩", "正方一辩", 90),
+  makeSpeech("neg-1-speech", "negative", "一辩", "立论", 240),
+  makeQuestion("aff-4-question", "affirm", "四辩", "反方一辩", 90),
+  makeSpeech("aff-2-rebuttal", "affirm", "二辩", "驳论", 180),
+  makeSpeech("neg-2-rebuttal", "negative", "二辩", "驳论", 180),
+  makeDualDebate("second-debate", "双方二辩对辩", "二辩对辩", 120),
+  makeQuestion("neg-3-question", "negative", "三辩", "正方", 180, "正方任意 2 位辩手接质"),
+  makeQuestion("aff-3-question", "affirm", "三辩", "反方", 180, "反方任意 2 位辩手接质"),
+  makeSpeech("neg-3-summary", "negative", "三辩", "质询小结", 120),
+  makeSpeech("aff-3-summary", "affirm", "三辩", "质询小结", 120),
+  {
+    id: "tactical-break",
+    type: "break",
+    team: "neutral",
+    teamLabel: "双方",
+    speaker: "中场休息",
+    phase: "战术暂停",
+    seconds: 180,
+    title: "中场 · 战术暂停",
+  },
+  makeSpeech("neg-1-supplement", "negative", "一辩", "补充陈词", 180),
+  makeSpeech("aff-1-supplement", "affirm", "一辩", "补充陈词", 180),
+  makeDualDebate("free-debate", "自由辩论", "自由辩论", 240),
+  makeSpeech("neg-4-close", "negative", "四辩", "结辩", 300),
+  makeSpeech("aff-4-close", "affirm", "四辩", "结辩", 300),
 ];
 
 const state = {
   rounds: BASE_ROUNDS.map(cloneRound),
   currentIndex: 0,
   remainingMs: 0,
-  freeDebateRemainingMs: {
+  dualRemainingMs: {
     affirm: 0,
     negative: 0,
   },
-  freeDebateActiveTeam: "affirm",
+  activeTeam: "affirm",
   running: false,
   lastTick: 0,
   timerId: 0,
@@ -47,7 +62,10 @@ const els = {
   currentTitle: document.querySelector("#currentTitle"),
   currentSpeaker: document.querySelector("#currentSpeaker"),
   timerReadout: document.querySelector("#timerReadout"),
-  progressFill: document.querySelector("#progressFill"),
+  timerDial: document.querySelector("#timerDial"),
+  dialProgress: document.querySelector("#dialProgress"),
+  dialStatus: document.querySelector("#dialStatus"),
+  timerRule: document.querySelector("#timerRule"),
   debateBoard: document.querySelector("#debateBoard"),
   affirmDebateCard: document.querySelector("#affirmDebateCard"),
   negativeDebateCard: document.querySelector("#negativeDebateCard"),
@@ -82,7 +100,6 @@ const els = {
   voteLink: document.querySelector("#voteLink"),
   refreshVotesBtn: document.querySelector("#refreshVotesBtn"),
   resetLiveVotesBtn: document.querySelector("#resetLiveVotesBtn"),
-  stageCanvas: document.querySelector("#stageCanvas"),
   timeWarningModal: document.querySelector("#timeWarningModal"),
   timeWarningCloseBtn: document.querySelector("#timeWarningCloseBtn"),
   timeWarningTitle: document.querySelector("#timeWarningTitle"),
@@ -102,29 +119,25 @@ function makeSpeech(id, team, speaker, phase, seconds) {
   };
 }
 
-function makeChairQuestion(id, team) {
+function makeQuestion(id, team, speaker, target, seconds, respondents = `${target}接质`) {
   return {
-    id,
-    type: "speech",
-    team,
-    teamLabel: TEAM_LABELS[team],
-    speaker: `${TEAM_LABELS[team]}回应`,
-    phase: "主席提问",
-    seconds: 60,
-    title: `主席向${TEAM_LABELS[team]}提问`,
+    ...makeSpeech(id, team, speaker, "质询", seconds),
+    type: "question",
+    title: `${TEAM_LABELS[team]}${speaker}质询${target}`,
+    respondents,
   };
 }
 
-function makeFreeDebate() {
+function makeDualDebate(id, title, phase, secondsPerSide) {
   return {
-    id: "free-debate",
-    type: "free-debate",
+    id,
+    type: "dual-timer",
     team: "affirm",
     teamLabel: "双方",
     speaker: "双方",
-    phase: "自由辩论",
-    secondsPerSide: 240,
-    title: "自由辩论",
+    phase,
+    secondsPerSide,
+    title,
   };
 }
 
@@ -136,8 +149,8 @@ function getCurrentRound() {
   return state.rounds[state.currentIndex] || null;
 }
 
-function isFreeDebate(round = getCurrentRound()) {
-  return round?.type === "free-debate";
+function isDualTimer(round = getCurrentRound()) {
+  return round?.type === "dual-timer";
 }
 
 function getOtherTeam(team) {
@@ -161,20 +174,20 @@ function loadCurrentRound() {
   clearWarningsForRound(round);
   if (!round) {
     state.remainingMs = 0;
-    state.freeDebateRemainingMs = { affirm: 0, negative: 0 };
+    state.dualRemainingMs = { affirm: 0, negative: 0 };
     return;
   }
 
-  if (isFreeDebate(round)) {
+  if (isDualTimer(round)) {
     const ms = round.secondsPerSide * 1000;
-    state.freeDebateRemainingMs = { affirm: ms, negative: ms };
-    state.freeDebateActiveTeam = "affirm";
+    state.dualRemainingMs = { affirm: ms, negative: ms };
+    state.activeTeam = "affirm";
     state.remainingMs = ms;
     return;
   }
 
   state.remainingMs = round.seconds * 1000;
-  state.freeDebateRemainingMs = { affirm: 0, negative: 0 };
+  state.dualRemainingMs = { affirm: 0, negative: 0 };
 }
 
 function formatTime(ms) {
@@ -199,18 +212,16 @@ function formatDuration(seconds) {
 function getActiveRemainingMs() {
   const round = getCurrentRound();
   if (!round) return 0;
-  if (isFreeDebate(round)) return state.freeDebateRemainingMs[state.freeDebateActiveTeam];
+  if (isDualTimer(round)) return state.dualRemainingMs[state.activeTeam];
   return state.remainingMs;
 }
 
-function getTotalProgress() {
+function getActiveProgress() {
   const round = getCurrentRound();
   if (!round) return 0;
 
-  if (isFreeDebate(round)) {
-    const initial = round.secondsPerSide * 2 * 1000;
-    const remaining = state.freeDebateRemainingMs.affirm + state.freeDebateRemainingMs.negative;
-    return Math.max(0, Math.min(1, remaining / initial));
+  if (isDualTimer(round)) {
+    return Math.max(0, Math.min(1, getActiveRemainingMs() / (round.secondsPerSide * 1000)));
   }
 
   return Math.max(0, Math.min(1, state.remainingMs / (round.seconds * 1000)));
@@ -219,8 +230,8 @@ function getTotalProgress() {
 function isCurrentRoundComplete() {
   const round = getCurrentRound();
   if (!round) return true;
-  if (isFreeDebate(round)) {
-    return state.freeDebateRemainingMs.affirm === 0 && state.freeDebateRemainingMs.negative === 0;
+  if (isDualTimer(round)) {
+    return state.dualRemainingMs.affirm === 0 && state.dualRemainingMs.negative === 0;
   }
   return state.remainingMs === 0;
 }
@@ -238,7 +249,8 @@ function render() {
     els.currentSpeaker.textContent = "观众投票";
     els.timerReadout.textContent = "00:00";
     els.timerReadout.className = "timer-readout done";
-    els.progressFill.style.width = "0%";
+    renderDial();
+    els.timerRule.textContent = "所有计时环节已结束，可记录最终投票。";
     els.matchStatus.textContent = "比赛结束 · 等待公布观众投票";
     els.startBtn.disabled = true;
     els.pauseBtn.disabled = true;
@@ -252,26 +264,28 @@ function render() {
     return;
   }
 
-  if (isFreeDebate(round)) {
-    renderFreeDebate(round);
+  if (isDualTimer(round)) {
+    renderDualTimer(round);
   } else {
     renderSpeech(round);
   }
 
   const complete = isCurrentRoundComplete();
-  els.progressFill.style.width = `${getTotalProgress() * 100}%`;
-  els.matchStatus.textContent = `三辩制 · 第 ${state.currentIndex + 1} / ${state.rounds.length} 环节`;
+  renderDial();
+  els.matchStatus.textContent = `四辩制 · 第 ${state.currentIndex + 1} / ${state.rounds.length} 环节`;
+  els.startBtn.textContent = round.type === "question" ? "质询方计时" : "开始 / 继续";
+  els.pauseBtn.textContent = round.type === "question" ? "接质回答 · 暂停" : "暂停";
   els.startBtn.disabled = state.running || complete;
   els.pauseBtn.disabled = !state.running;
   els.resetBtn.disabled = false;
   els.finishBtn.disabled = complete;
-  els.finishBtn.textContent = isFreeDebate(round) ? "结束自由辩论" : "结束发言";
-  els.switchSideBtn.disabled = !isFreeDebate(round) || complete;
+  els.finishBtn.textContent = isDualTimer(round) ? `结束${round.phase}` : round.type === "break" ? "结束暂停环节" : "结束发言";
+  els.switchSideBtn.hidden = !isDualTimer(round);
+  els.switchSideBtn.disabled = !isDualTimer(round) || complete;
   els.prevBtn.disabled = state.running || state.currentIndex === 0;
   els.nextBtn.disabled = state.running || !complete;
   renderTimeline();
   renderVoteLedger();
-  drawStage(round);
 }
 
 function renderSpeech(round) {
@@ -281,23 +295,27 @@ function renderSpeech(round) {
   els.currentPhase.textContent = round.phase;
   els.currentTitle.textContent = round.title;
   els.currentSpeaker.textContent = `${round.speaker} · ${formatDuration(round.seconds)}`;
+  els.timerRule.textContent = round.type === "question"
+    ? `${round.respondents}；仅${round.teamLabel}质询计时，接质回答时请暂停。`
+    : round.type === "break" ? "双方战术交流，暂停环节结束后进入补充陈词。" : "单方计时，剩余 30 秒提醒，时间到响铃。";
   renderReadout(state.remainingMs);
 }
 
-function renderFreeDebate(round) {
-  const activeTeam = state.freeDebateActiveTeam;
+function renderDualTimer(round) {
+  const activeTeam = state.activeTeam;
   const activeLabel = TEAM_LABELS[activeTeam];
   els.debateBoard.hidden = false;
   els.currentTeam.textContent = activeLabel;
   els.currentTeam.className = `team-pill ${activeTeam}`;
   els.currentPhase.textContent = round.phase;
   els.currentTitle.textContent = round.title;
-  els.currentSpeaker.textContent = `${activeLabel}发言中 · 双方各 4 分钟`;
-  els.affirmDebateTime.textContent = formatTime(state.freeDebateRemainingMs.affirm);
-  els.negativeDebateTime.textContent = formatTime(state.freeDebateRemainingMs.negative);
+  els.currentSpeaker.textContent = `${activeLabel}${state.running ? "发言中" : "待计时"} · 双方各 ${formatDuration(round.secondsPerSide)}`;
+  els.timerRule.textContent = "双方独立计时，换人发言时点击「切换发言方」。";
+  els.affirmDebateTime.textContent = formatTime(state.dualRemainingMs.affirm);
+  els.negativeDebateTime.textContent = formatTime(state.dualRemainingMs.negative);
   els.affirmDebateCard.classList.toggle("active", activeTeam === "affirm");
   els.negativeDebateCard.classList.toggle("active", activeTeam === "negative");
-  renderReadout(state.freeDebateRemainingMs[activeTeam]);
+  renderReadout(state.dualRemainingMs[activeTeam]);
 }
 
 function renderReadout(ms) {
@@ -310,6 +328,16 @@ function renderReadout(ms) {
   }
 }
 
+function renderDial() {
+  const remaining = getActiveRemainingMs();
+  const progress = getActiveProgress();
+  els.dialProgress.style.strokeDashoffset = String(100 * (1 - progress));
+  els.timerDial.classList.toggle("warning", remaining > 0 && remaining <= 30000);
+  els.timerDial.classList.toggle("done", remaining === 0);
+  els.timerDial.classList.toggle("running", state.running);
+  els.dialStatus.textContent = remaining === 0 ? "计时结束" : state.running ? "计时中" : progress === 1 ? "准备开始" : "已暂停";
+}
+
 function maybeTriggerThirtySecondWarning(round, team, previousMs, nextMs) {
   const thresholdMs = 30 * 1000;
   if (previousMs <= thresholdMs || nextMs > thresholdMs || nextMs === 0) return;
@@ -318,7 +346,7 @@ function maybeTriggerThirtySecondWarning(round, team, previousMs, nextMs) {
   if (state.warningKeys.has(key)) return;
   state.warningKeys.add(key);
 
-  const title = team ? `${TEAM_LABELS[team]}自由辩论` : round.title;
+  const title = team ? `${TEAM_LABELS[team]}${round.phase}` : round.title;
   showTimeWarning(title);
   playWarningTone();
 }
@@ -357,14 +385,14 @@ function renderTimeline() {
     title.textContent = round.title;
     const sub = document.createElement("div");
     sub.className = "timeline-sub";
-    sub.textContent = isFreeDebate(round)
+    sub.textContent = isDualTimer(round)
       ? `双方各 ${formatShort(round.secondsPerSide)} · 交替计时`
-      : `${round.speaker} · ${round.phase}`;
+      : round.type === "question" ? "仅质询方计时 · 回答时暂停" : `${round.speaker} · ${round.phase}`;
     textWrap.append(title, sub);
 
     const time = document.createElement("div");
     time.className = "timeline-time";
-    time.textContent = isFreeDebate(round)
+    time.textContent = isDualTimer(round)
       ? `${formatShort(round.secondsPerSide)}/方`
       : formatShort(round.seconds);
 
@@ -376,8 +404,8 @@ function renderTimeline() {
 function startTimer() {
   const round = getCurrentRound();
   if (state.running || isCurrentRoundComplete() || !round) return;
-  if (isFreeDebate(round) && state.freeDebateRemainingMs[state.freeDebateActiveTeam] === 0) {
-    state.freeDebateActiveTeam = state.freeDebateRemainingMs.affirm > 0 ? "affirm" : "negative";
+  if (isDualTimer(round) && state.dualRemainingMs[state.activeTeam] === 0) {
+    state.activeTeam = state.dualRemainingMs.affirm > 0 ? "affirm" : "negative";
   }
   state.running = true;
   state.lastTick = performance.now();
@@ -394,6 +422,7 @@ function stopTimer() {
 }
 
 function pauseTimer() {
+  if (state.running) consumeElapsed(performance.now() - state.lastTick);
   stopTimer();
   render();
 }
@@ -413,18 +442,18 @@ function consumeElapsed(elapsed) {
     return;
   }
 
-  if (isFreeDebate(round)) {
-    const activeTeam = state.freeDebateActiveTeam;
-    const previousValue = state.freeDebateRemainingMs[activeTeam];
+  if (isDualTimer(round)) {
+    const activeTeam = state.activeTeam;
+    const previousValue = state.dualRemainingMs[activeTeam];
     const nextValue = Math.max(0, previousValue - elapsed);
-    state.freeDebateRemainingMs[activeTeam] = nextValue;
+    state.dualRemainingMs[activeTeam] = nextValue;
     maybeTriggerThirtySecondWarning(round, activeTeam, previousValue, nextValue);
 
     if (nextValue === 0) {
       const otherTeam = getOtherTeam(activeTeam);
       playFinishTone();
-      if (state.freeDebateRemainingMs[otherTeam] > 0) {
-        state.freeDebateActiveTeam = otherTeam;
+      if (state.dualRemainingMs[otherTeam] > 0) {
+        state.activeTeam = otherTeam;
       } else {
         stopTimer();
       }
@@ -451,8 +480,8 @@ function finishCurrentRound() {
   const round = getCurrentRound();
   if (!round || isCurrentRoundComplete()) return;
   stopTimer();
-  if (isFreeDebate(round)) {
-    state.freeDebateRemainingMs = { affirm: 0, negative: 0 };
+  if (isDualTimer(round)) {
+    state.dualRemainingMs = { affirm: 0, negative: 0 };
   } else {
     state.remainingMs = 0;
   }
@@ -462,7 +491,7 @@ function finishCurrentRound() {
 
 function switchDebateSide() {
   const round = getCurrentRound();
-  if (!isFreeDebate(round) || isCurrentRoundComplete()) return;
+  if (!isDualTimer(round) || isCurrentRoundComplete()) return;
 
   if (state.running) {
     const now = performance.now();
@@ -470,9 +499,9 @@ function switchDebateSide() {
     state.lastTick = now;
   }
 
-  const otherTeam = getOtherTeam(state.freeDebateActiveTeam);
-  if (state.freeDebateRemainingMs[otherTeam] > 0) {
-    state.freeDebateActiveTeam = otherTeam;
+  const otherTeam = getOtherTeam(state.activeTeam);
+  if (state.dualRemainingMs[otherTeam] > 0) {
+    state.activeTeam = otherTeam;
   }
   render();
 }
@@ -835,94 +864,6 @@ function initLiveVoting() {
   state.voteStream.onerror = () => setLiveStatus("等待投票服务器", "error");
 }
 
-function drawStage(round = getCurrentRound()) {
-  const canvas = els.stageCanvas;
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  const width = Math.max(1, Math.floor(rect.width * dpr));
-  const height = Math.max(1, Math.floor(rect.height * dpr));
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-  }
-
-  const ctx = canvas.getContext("2d");
-  ctx.save();
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, rect.width, rect.height);
-
-  const activeTeam = isFreeDebate(round) ? state.freeDebateActiveTeam : round?.team;
-  ctx.fillStyle = "#172628";
-  ctx.fillRect(0, 0, rect.width, rect.height);
-
-  ctx.fillStyle = "#d7a63f";
-  ctx.beginPath();
-  ctx.arc(rect.width * 0.76, 44, 23, 0, Math.PI * 2);
-  ctx.fill();
-
-  drawMountain(ctx, rect.width, rect.height, "#314a45", 0.64, 0.28);
-  drawMountain(ctx, rect.width, rect.height, "#233a38", 0.76, 0.12);
-
-  ctx.strokeStyle = "#d7a63f";
-  ctx.lineWidth = 4;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(rect.width * 0.08, rect.height * 0.82);
-  ctx.bezierCurveTo(
-    rect.width * 0.28,
-    rect.height * 0.7,
-    rect.width * 0.42,
-    rect.height * 0.88,
-    rect.width * 0.58,
-    rect.height * 0.5,
-  );
-  ctx.stroke();
-
-  drawPositionMarker(ctx, rect.width * 0.15, rect.height * 0.64, "移山", "#17756d", activeTeam === "affirm");
-  drawPositionMarker(ctx, rect.width * 0.85, rect.height * 0.64, "搬家", "#b54a45", activeTeam === "negative");
-
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.font = "800 13px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("一寸欢喜（深圳）辩论队", rect.width * 0.5, rect.height - 16);
-  ctx.restore();
-}
-
-function drawMountain(ctx, width, height, color, baseline, offset) {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(0, height);
-  ctx.lineTo(0, height * baseline);
-  ctx.lineTo(width * (0.16 + offset), height * 0.31);
-  ctx.lineTo(width * (0.31 + offset), height * 0.66);
-  ctx.lineTo(width * (0.46 + offset), height * 0.38);
-  ctx.lineTo(width, height * 0.72);
-  ctx.lineTo(width, height);
-  ctx.closePath();
-  ctx.fill();
-}
-
-function drawPositionMarker(ctx, x, y, label, color, active) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.fillStyle = active ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.12)";
-  ctx.beginPath();
-  ctx.arc(0, 0, 42, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(0, 0, 32, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "900 15px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(label, 0, 1);
-  ctx.restore();
-}
-
 function playFinishTone() {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return;
@@ -983,7 +924,6 @@ els.timeWarningCloseBtn.addEventListener("click", hideTimeWarning);
 els.timeWarningModal.addEventListener("click", (event) => {
   if (event.target === els.timeWarningModal) hideTimeWarning();
 });
-window.addEventListener("resize", () => drawStage());
 
 loadCurrentRound();
 render();

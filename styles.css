@@ -1,19 +1,20 @@
 :root {
-  --page: #edf1ee;
-  --ink: #192522;
-  --muted: #62706c;
-  --line: #cfd7d3;
-  --surface: #ffffff;
-  --stage: #172628;
-  --affirm: #17756d;
-  --affirm-dark: #0f5752;
-  --affirm-soft: #dcefeb;
-  --negative: #b54a45;
-  --negative-dark: #873532;
-  --negative-soft: #f5e2df;
-  --gold: #c08b2d;
-  --gold-soft: #f6edd8;
-  --neutral: #38515a;
+  color-scheme: dark;
+  --page: #050607;
+  --ink: #f4f5f7;
+  --muted: #a1a8b2;
+  --line: #2b3038;
+  --surface: #0e1116;
+  --stage: #0c0e12;
+  --affirm: #2fba9e;
+  --affirm-dark: #80e3ce;
+  --affirm-soft: #102a25;
+  --negative: #dc6572;
+  --negative-dark: #ffa5b0;
+  --negative-soft: #301b21;
+  --gold: #e9bd70;
+  --gold-soft: #302719;
+  --neutral: #bec6d2;
   --shadow: 0 16px 38px rgba(23, 38, 40, 0.12);
 }
 
@@ -94,7 +95,7 @@ h3 {
 
 .topbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.46fr);
+  grid-template-columns: minmax(0, 1fr) 260px;
   gap: 28px;
   align-items: end;
   margin-bottom: 18px;
@@ -102,6 +103,7 @@ h3 {
   border-radius: 8px;
   color: #ffffff;
   background: var(--stage);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
 
@@ -122,8 +124,8 @@ h3 {
 h1 {
   max-width: 780px;
   margin-bottom: 16px;
-  font-size: 2.6rem;
-  line-height: 1.1;
+  font-size: clamp(1.55rem, 2.5vw, 2.15rem);
+  line-height: 1.4;
 }
 
 .stance-row {
@@ -190,7 +192,7 @@ h1 {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(390px, 0.88fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(370px, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -207,23 +209,17 @@ h1 {
   position: sticky;
   top: 18px;
   overflow: hidden;
-  min-height: 680px;
+  min-height: 0;
   padding: 24px;
   box-shadow: var(--shadow);
 }
 
-.stage-visual {
-  position: relative;
-  height: 206px;
-  margin: -24px -24px 22px;
-  border-bottom: 1px solid var(--line);
-  background: var(--stage);
-}
-
-.stage-visual canvas {
+.topic-context {
   display: block;
-  width: 100%;
-  height: 100%;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.68em;
+  font-weight: 600;
 }
 
 .current-meta {
@@ -256,11 +252,11 @@ h1 {
 
 .team-pill.neutral {
   color: var(--neutral);
-  background: #e4ebed;
+  background: #242a33;
 }
 
 .phase-pill {
-  color: #745211;
+  color: #efd194;
   background: var(--gold-soft);
 }
 
@@ -277,31 +273,84 @@ h1 {
   font-weight: 750;
 }
 
-.timer-readout {
-  display: grid;
-  place-items: center;
+/* The outer arc follows the active speaker's remaining time. */
+.timer-dial {
+  position: relative;
+  width: min(100%, 380px);
+  aspect-ratio: 1;
+  margin: 14px auto 18px;
+  color: #ffffff;
+}
+
+.dial-face {
+  display: block;
   width: 100%;
-  min-height: 178px;
-  border: 1px solid #bfc9c4;
-  border-radius: 8px;
-  color: var(--stage);
-  font-size: 7rem;
-  font-weight: 900;
+  height: 100%;
+  overflow: visible;
+  transform: rotate(-90deg);
+  fill: none;
+}
+
+.dial-ticks {
+  stroke: #414852;
+  stroke-width: 5;
+  stroke-dasharray: 0.4 4.6;
+}
+
+.dial-track {
+  stroke: #252a32;
+  stroke-width: 6;
+}
+
+.dial-progress {
+  stroke: #ffffff;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.2s linear, stroke 0.2s;
+}
+
+.dial-center {
+  position: absolute;
+  inset: 16%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+}
+
+.dial-label,
+.dial-status {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+}
+
+.timer-readout {
+  color: #ffffff;
+  font-size: clamp(3.7rem, 7vw, 6.1rem);
+  font-weight: 800;
   line-height: 1;
+  letter-spacing: -0.045em;
   font-variant-numeric: tabular-nums;
-  background: #f6f8f7;
 }
 
-.timer-readout.warning {
-  color: #925f0b;
-  border-color: #d9bd82;
-  background: #fbf5e8;
-}
+.timer-dial.running .dial-status { color: #ffffff; }
+.timer-dial.warning .dial-progress { stroke: var(--gold); }
+.timer-dial.warning .dial-status { color: var(--gold); }
+.timer-dial.done .dial-track { stroke: var(--negative); }
+.timer-dial.done .dial-status { color: var(--negative-dark); }
 
-.timer-readout.done {
-  color: var(--negative-dark);
-  border-color: #d9aaa5;
-  background: #faecea;
+.timer-rule {
+  min-height: 40px;
+  margin: 16px 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .debate-board {
@@ -322,7 +371,7 @@ h1 {
   padding: 13px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #f7f9f8;
+  background: #12161c;
 }
 
 .debate-clock span {
@@ -352,25 +401,9 @@ h1 {
   background: var(--negative-soft);
 }
 
-.progress-track {
-  height: 10px;
-  margin: 16px 0 18px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #dfe6e2;
-}
-
-.progress-fill {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--gold);
-  transition: width 0.2s ease;
-}
-
 .timer-controls {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
 }
 
@@ -383,14 +416,14 @@ h1 {
 }
 
 button.primary {
-  border-color: var(--affirm-dark);
-  color: #ffffff;
-  background: var(--affirm);
+  border-color: #ffffff;
+  color: #090b0f;
+  background: #ffffff;
 }
 
 #switchSideBtn:not(:disabled) {
   border-color: #9b6d1d;
-  color: #65470e;
+  color: #efd194;
   background: var(--gold-soft);
 }
 
@@ -438,17 +471,17 @@ button.primary {
   padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .timeline-item.active {
-  border-color: #80938c;
+  border-color: #657181;
   box-shadow: inset 4px 0 0 var(--gold);
 }
 
 .timeline-item.done {
-  color: #71807b;
-  background: #f1f4f2;
+  color: #8b94a1;
+  background: #0d1015;
 }
 
 .timeline-number {
@@ -460,7 +493,7 @@ button.primary {
   color: #ffffff;
   font-size: 0.78rem;
   font-weight: 900;
-  background: var(--neutral);
+  background: #303946;
 }
 
 .timeline-title {
@@ -490,7 +523,7 @@ button.primary {
   color: var(--neutral);
   font-size: 0.82rem;
   font-weight: 850;
-  background: #f5f7f6;
+  background: #141820;
 }
 
 .live-status.connected {
@@ -533,7 +566,7 @@ button.primary {
   color: var(--ink);
   font-size: 1.06rem;
   font-weight: 800;
-  background: #f7f9f8;
+  background: #12161c;
 }
 
 .margin-line,
@@ -581,7 +614,7 @@ button.primary {
 
 .result-box.tie {
   border-left-color: var(--neutral);
-  background: #e7edef;
+  background: #20252d;
 }
 
 .result-box.tie b {
@@ -621,7 +654,7 @@ button.primary {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #f7f9f8;
+  background: #12161c;
 }
 
 .vote-stat-grid span {
@@ -651,7 +684,7 @@ button.primary {
   width: 100%;
   min-width: 620px;
   border-collapse: collapse;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .ledger-table th,
@@ -666,7 +699,7 @@ button.primary {
 .ledger-table th {
   color: var(--neutral);
   font-weight: 900;
-  background: #e9eeec;
+  background: #20252d;
 }
 
 .ledger-table td {
@@ -681,7 +714,7 @@ button.primary {
 
 .hidden-final-button {
   border-color: rgba(192, 139, 45, 0.52);
-  color: #65470e;
+  color: #efd194;
   background: var(--gold-soft);
 }
 
@@ -700,7 +733,7 @@ button.primary {
 
 .final-result.tie {
   border-left-color: var(--neutral);
-  background: #e7edef;
+  background: #20252d;
 }
 
 .live-vote-box {
@@ -726,7 +759,7 @@ button.primary {
   display: block;
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--affirm);
+  color: var(--affirm-dark);
   font-weight: 850;
 }
 
@@ -756,7 +789,7 @@ button.primary {
   border-radius: 8px;
   color: var(--ink);
   text-align: center;
-  background: #ffffff;
+  background: var(--surface);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
   animation: warning-in 0.2s ease-out;
 }
@@ -778,7 +811,7 @@ button.primary {
 
 .time-warning-kicker {
   margin-bottom: 10px;
-  color: #7a5614;
+  color: #efd194;
   font-size: 0.8rem;
   font-weight: 900;
 }
@@ -813,6 +846,7 @@ button.primary {
   .time-warning-panel {
     animation: none;
   }
+  .dial-progress { transition: none; }
 }
 
 @media (max-width: 1120px) {
@@ -848,16 +882,11 @@ button.primary {
   }
 
   h1 {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   .timer-surface {
     padding: 16px;
-  }
-
-  .stage-visual {
-    height: 168px;
-    margin: -16px -16px 18px;
   }
 
   #currentTitle {
@@ -865,8 +894,7 @@ button.primary {
   }
 
   .timer-readout {
-    min-height: 134px;
-    font-size: 4.5rem;
+    font-size: clamp(3.35rem, 14vw, 5.5rem);
   }
 
   .timer-controls {
@@ -887,11 +915,6 @@ button.primary {
 }
 
 @media (max-width: 430px) {
-  .event-meta p {
-    grid-template-columns: 1fr;
-    gap: 2px;
-  }
-
   .timeline-item {
     grid-template-columns: 28px minmax(0, 1fr);
   }
@@ -905,3 +928,5 @@ button.primary {
     grid-template-columns: 1fr;
   }
 }
+
+[hidden] { display: none !important; }

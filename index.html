@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>愚公应该移山 / 搬家 · 辩论赛控场台</title>
+    <title>努力会有回报 · 辩论赛控场台</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -12,34 +12,41 @@
         <div class="event-identity">
           <p class="eyebrow">一寸欢喜（深圳）辩论队</p>
           <p class="desk-label">辩论赛控场台</p>
-          <h1>愚公应该移山 / 搬家</h1>
+          <h1><span class="topic-context">高度不确定的时代里，</span>我们还该 / 不该教育孩子<br />“努力会有回报”</h1>
           <div class="stance-row" aria-label="双方持方">
-            <span class="stance affirm">正方 · 应该移山</span>
-            <span class="stance negative">反方 · 应该搬家</span>
+            <span class="stance affirm">正方 · 还该</span>
+            <span class="stance negative">反方 · 不该</span>
           </div>
         </div>
         <div class="event-meta">
-          <p><span>时间</span><strong>2026.9.5 19:00-20:30</strong></p>
-          <p><span>地点</span><strong>天安云谷5栋37楼日落剧场</strong></p>
-          <div class="match-badge" id="matchStatus">三辩制 · 11 个环节 · 单场赛制</div>
+          <p><span>赛制</span><strong>四辩制 · 17 个环节</strong></p>
+          <p><span>计时</span><strong>质询仅计质询方用时</strong></p>
+          <div class="match-badge" id="matchStatus">四辩制 · 第 1 / 17 环节</div>
         </div>
       </header>
 
       <main class="workspace">
         <section class="timer-surface" aria-labelledby="currentTitle">
-          <div class="stage-visual" aria-hidden="true">
-            <canvas id="stageCanvas"></canvas>
-          </div>
-
           <div class="current-meta">
             <span class="team-pill" id="currentTeam">正方</span>
-            <span class="phase-pill" id="currentPhase">陈词</span>
+            <span class="phase-pill" id="currentPhase">立论</span>
           </div>
 
-          <h2 id="currentTitle">正方一辩陈词</h2>
-          <p class="speaker-line" id="currentSpeaker">一辩 · 3 分钟</p>
+          <h2 id="currentTitle">正方一辩立论</h2>
+          <p class="speaker-line" id="currentSpeaker">一辩 · 4 分钟</p>
 
-          <div class="timer-readout" id="timerReadout" aria-live="polite">03:00</div>
+          <div class="timer-dial" id="timerDial">
+            <svg class="dial-face" viewBox="0 0 240 240" aria-hidden="true">
+              <circle class="dial-ticks" cx="120" cy="120" r="115" pathLength="300" />
+              <circle class="dial-track" cx="120" cy="120" r="102" />
+              <circle class="dial-progress" id="dialProgress" cx="120" cy="120" r="102" pathLength="100" />
+            </svg>
+            <div class="dial-center">
+              <span class="dial-label">剩余时间</span>
+              <div class="timer-readout" id="timerReadout" role="timer" aria-label="剩余时间">04:00</div>
+              <span class="dial-status" id="dialStatus">准备开始</span>
+            </div>
+          </div>
 
           <div class="debate-board" id="debateBoard" hidden>
             <div class="debate-clock affirm" id="affirmDebateCard">
@@ -52,9 +59,7 @@
             </div>
           </div>
 
-          <div class="progress-track" aria-hidden="true">
-            <div class="progress-fill" id="progressFill"></div>
-          </div>
+          <p class="timer-rule" id="timerRule">单方计时，剩余 30 秒提醒，时间到响铃。</p>
 
           <div class="timer-controls">
             <button class="primary" id="startBtn" type="button">开始</button>
@@ -86,11 +91,11 @@
               <div class="vote-match">
                 <h3>单场投票</h3>
                 <label>
-                  <span>正方票数 · 移山</span>
+                  <span>正方票数 · 还该教育孩子“努力会有回报”</span>
                   <input id="affirmVotes1" type="number" min="0" step="1" inputmode="numeric" value="0" />
                 </label>
                 <label>
-                  <span>反方票数 · 搬家</span>
+                  <span>反方票数 · 不该教育孩子“努力会有回报”</span>
                   <input id="negativeVotes1" type="number" min="0" step="1" inputmode="numeric" value="0" />
                 </label>
                 <div class="margin-line">

@@ -3,19 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>愚公应该移山 / 搬家 · 观众投票</title>
+    <title>高度不确定的时代里，我们还该 / 不该教育孩子“努力会有回报” · 观众投票</title>
     <style>
       :root {
-        --paper: #edf1ee;
-        --ink: #192522;
-        --muted: #62706c;
-        --line: #cfd7d3;
-        --stage: #172628;
-        --affirm: #17756d;
-        --affirm-soft: #dcefeb;
-        --negative: #b54a45;
-        --negative-soft: #f5e2df;
-        --gold: #c08b2d;
+        color-scheme: dark;
+        --paper: #050607;
+        --ink: #f4f5f7;
+        --muted: #a1a8b2;
+        --line: #2b3038;
+        --stage: #0c0e12;
+        --affirm: #2fba9e;
+        --affirm-soft: #102a25;
+        --negative: #dc6572;
+        --negative-soft: #301b21;
+        --gold: #e9bd70;
       }
 
       * {
@@ -56,8 +57,8 @@
 
       h1 {
         margin: 10px 0 0;
-        font-size: 2rem;
-        line-height: 1.1;
+        font-size: 1.65rem;
+        line-height: 1.5;
       }
 
       .topic {
@@ -81,7 +82,7 @@
         padding: 18px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #ffffff;
+        background: #0e1116;
       }
 
       .team-button {
@@ -106,7 +107,7 @@
       }
 
       .team-button.selected {
-        color: #ffffff;
+        color: #050607;
       }
 
       .team-button.affirm.selected {
@@ -125,7 +126,7 @@
         border-radius: 6px;
         color: var(--muted);
         font-weight: 850;
-        background: #ffffff;
+        background: #0e1116;
       }
 
       .counts {
@@ -138,7 +139,7 @@
         padding: 14px;
         border: 1px solid var(--line);
         border-radius: 6px;
-        background: #ffffff;
+        background: #0e1116;
       }
 
       .count span {
@@ -176,23 +177,23 @@
     <main class="page">
       <div class="brand">
         <span>一寸欢喜（深圳）辩论队 · 现场观众投票</span>
-        <h1>愚公应该移山 / 搬家</h1>
+        <h1>高度不确定的时代里，我们还该 / 不该教育孩子“努力会有回报”</h1>
         <p class="topic">请选择此刻更能说服你的持方</p>
-        <p class="event-detail">2026.9.5 19:00-20:30<br />天安云谷5栋37楼日落剧场</p>
+        <p class="event-detail">四辩制 · 17 个环节 · 现场观众投票</p>
       </div>
 
       <section class="vote-card">
-        <button class="team-button affirm" id="affirmBtn" type="button">正方 · 愚公应该移山</button>
-        <button class="team-button negative" id="negativeBtn" type="button">反方 · 愚公应该搬家</button>
+        <button class="team-button affirm" id="affirmBtn" type="button">正方 · 还该</button>
+        <button class="team-button negative" id="negativeBtn" type="button">反方 · 不该</button>
         <div class="status" id="status">请选择支持方</div>
 
         <div class="counts">
           <div class="count">
-            <span>正方 · 移山</span>
+            <span>正方 · 还该</span>
             <strong id="affirmCount">0</strong>
           </div>
           <div class="count">
-            <span>反方 · 搬家</span>
+            <span>反方 · 不该</span>
             <strong id="negativeCount">0</strong>
           </div>
         </div>

@@ -1,6 +1,6 @@
 # 部署说明
 
-域名：`triplewings123.online`
+域名：`3wings.top`
 
 这个项目是一个纯 Node.js 服务，无需构建步骤。`server.js` 同时提供控场页、观众投票页和实时票数接口。
 
@@ -9,7 +9,7 @@
 在 DNSPod 或腾讯云域名解析里添加记录：
 
 - 主机记录：`@`，类型：`A`，记录值：服务器公网 IP
-- 主机记录：`www`，类型：`A`，记录值：服务器公网 IP
+- 当前只使用根域名 `3wings.top`，不需要 `www` 记录。
 
 等待解析生效后，服务器安全组/防火墙放行：
 
@@ -31,10 +31,10 @@ sudo chown -R $USER:$USER /opt/debates
 scp -r /Users/triplewings/vibecoding/debates/* root@服务器公网IP:/opt/debates/
 ```
 
-如果以后放到 GitHub，也可以在服务器上：
+从 GitHub 获取代码：
 
 ```bash
-git clone 仓库地址 /opt/debates
+git clone https://github.com/kfxp12138/yicundebate.git /opt/debates
 ```
 
 ## 3. 安装 Node.js
@@ -102,7 +102,7 @@ sudo apt-get install -y nginx
 sudo tee /etc/nginx/sites-available/debates >/dev/null <<'EOF'
 server {
     listen 80;
-    server_name triplewings123.online www.triplewings123.online;
+    server_name 3wings.top;
 
     location / {
         proxy_pass http://127.0.0.1:5177;
@@ -137,8 +137,8 @@ sudo systemctl reload nginx
 
 现在应可访问：
 
-- `http://triplewings123.online/index.html`
-- `http://triplewings123.online/vote.html`
+- `http://3wings.top/index.html`
+- `http://3wings.top/vote.html`
 
 ## 6. 开启 HTTPS
 
@@ -146,20 +146,20 @@ sudo systemctl reload nginx
 
 ```bash
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d triplewings123.online -d www.triplewings123.online
+sudo certbot --nginx -d 3wings.top
 ```
 
 完成后访问：
 
-- `https://triplewings123.online/index.html`
-- `https://triplewings123.online/vote.html`
+- `https://3wings.top/index.html`
+- `https://3wings.top/vote.html`
 
 ## 7. 微信投票使用方式
 
-把 `https://triplewings123.online/vote.html` 做成二维码给观众扫码。控场屏打开：
+把 `https://3wings.top/vote.html` 做成二维码给观众扫码。控场屏打开：
 
 ```text
-https://triplewings123.online/index.html
+https://3wings.top/index.html
 ```
 
 当前版本用浏览器本地身份限制一人一票，适合小型现场活动。若要更严格防刷票，后续应接微信公众号网页授权或小程序登录，用微信 `openid` 作为投票身份。
@@ -184,12 +184,14 @@ journalctl -u debates -f
 sudo systemctl restart debates
 ```
 
-更新代码后：
+更新代码（部署分支为 `main`）：
 
 ```bash
 cd /opt/debates
-sudo systemctl restart debates
+git pull --ff-only origin main
 ```
+
+只修改 `index.html`、`app.js`、`styles.css` 或 `vote.html` 时，刷新浏览器即可生效，无需重启服务。修改 `server.js` 后才需要 `sudo systemctl restart debates`。
 
 ## 注意
 
