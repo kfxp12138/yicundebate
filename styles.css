@@ -128,6 +128,17 @@ h1 {
   line-height: 1.4;
 }
 
+.event-identity {
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.topic-line {
+  display: block;
+  white-space: nowrap;
+  font-size: min(1em, 4.8cqw);
+}
+
 .stance-row {
   display: flex;
   flex-wrap: wrap;
